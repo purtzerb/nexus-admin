@@ -18,7 +18,7 @@ export default function AdminApp() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto">
         <h1 className="text-2xl font-bold mb-6">{pageTitle} Dashboard</h1>
         {/* The child pages will be rendered here through the Next.js router */}
       </main>

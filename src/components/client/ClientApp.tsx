@@ -12,7 +12,7 @@ export default function ClientApp() {
           <h1 className="text-xl font-bold">Nexus Client Portal</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm">{user?.name}</span>
-            <button 
+            <button
               onClick={logout}
               className="px-3 py-1 bg-buttonPrimary text-white rounded-md hover:bg-buttonPrimary/90"
             >
@@ -21,13 +21,13 @@ export default function ClientApp() {
           </div>
         </div>
       </header>
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <main className="max-w-7xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Client Dashboard</h2>
-        
+
         <div className="bg-white p-6 rounded-lg shadow-md">
           <p className="mb-4">Welcome to your Client Dashboard.</p>
-          
+
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">Your Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -55,7 +55,7 @@ export default function ClientApp() {
               </div>
             </div>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-2">Client Features</h3>
             <ul className="list-disc pl-5">

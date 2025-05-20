@@ -19,7 +19,7 @@ export default async function ClientLayout({
   return (
     <div className="flex h-screen">
       <Sidebar navItems={clientNavItems} userInfo={userInfo} />
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         {children}
       </main>
     </div>

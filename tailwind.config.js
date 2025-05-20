@@ -9,7 +9,7 @@ module.exports = {
     extend: {
       colors: {
         cardBackground: '#FFFFFF',
-        darkerBackground: '#E9E7E4',
+        darkerBackground: '#FAF9F8',
         background: '#E5E7EB',
         buttonPrimary: '#141417',
         buttonBorder: '#E9E7E4',

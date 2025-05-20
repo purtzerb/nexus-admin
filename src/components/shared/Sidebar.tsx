@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ navItems, userInfo }) => {
           })}
         </ul>
       </nav>
-      <div className="p-4 border-t border-buttonBorder">
+      {/* <div className="p-4 border-t border-buttonBorder">
         <div className="flex items-center">
           <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
             <span className="text-xs">{userInfo?.name?.charAt(0) || 'U'}</span>
@@ -68,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ navItems, userInfo }) => {
             </Link>
           </div>
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 };
