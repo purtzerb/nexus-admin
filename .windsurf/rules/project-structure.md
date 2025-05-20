@@ -34,3 +34,5 @@ Code Comments: Write clear and concise comments for complex logic, non-obvious c
 Error Handling (General): Implement try...catch blocks for asynchronous operations. Use error.js files for handling errors within route segments.
 
 User-Friendly Errors: Provide user-friendly error messages or notifications on the client-side.
+
+All names (such as the name of the cookie) should be stored in a constants file (lib/constants). This way, they are not hard coded in multiple locations, which should be avoided.

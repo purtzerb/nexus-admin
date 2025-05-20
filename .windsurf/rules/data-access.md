@@ -30,3 +30,5 @@ API Error Handling: Implement consistent error handling in Route Handlers. Retur
 Mongoose Validations: Utilize Mongoose schema validations (e.g., required, enum, min, max, match) to enforce data integrity.
 
 Data Sanitization: Perform necessary data sanitization to prevent common security vulnerabilities.
+
+Types: Types should be stored within the model file for centralized access on the backend. On the front-end, each hook should also export a type that outlines the type of data the hook is returning. This is because the data a hook returns does not necessarily match the model.
