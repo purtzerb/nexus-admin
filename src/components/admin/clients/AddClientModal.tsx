@@ -92,11 +92,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     enabled: isOpen,
   });
 
-  // Fetch departments from the database
+  // Fetch departments from the database (limited to 5)
   const { data: dbDepartments } = useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/departments');
+      const response = await fetch('/api/admin/departments?limit=5');
       if (!response.ok) {
         throw new Error('Failed to fetch departments');
       }
@@ -284,17 +284,21 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   // Search functions for SearchableSelect components
   const searchDepartments = async (query: string): Promise<Option[]> => {
     try {
-      // Always fetch from database to ensure we have the latest departments
-      const response = await fetch(`/api/admin/departments?q=${encodeURIComponent(query)}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch departments');
-      }
-
-      const data = await response.json();
+      // Use React Query to fetch and cache departments
+      const result = await queryClient.fetchQuery({
+        queryKey: ['departments', query],
+        queryFn: async () => {
+          const response = await fetch(`/api/admin/departments?q=${encodeURIComponent(query)}&limit=5`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch departments');
+          }
+          return response.json();
+        },
+        staleTime: 30000, // 30 seconds
+      });
 
       // Map API response to options format
-      return data.departments.map((dept: any) => ({
+      return result.departments.map((dept: any) => ({
         value: dept.name,
         label: dept.clientCount ? `${dept.name} (${dept.clientCount} clients)` : dept.name
       }));
@@ -314,25 +318,26 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
 
   const searchSolutionsEngineers = async (query: string): Promise<Option[]> => {
     try {
-      // Use local SEs if available and query is empty
-      if (!query.trim() && solutionsEngineers && solutionsEngineers.length > 0) {
-        return solutionsEngineers.map(se => ({
-          value: se._id,
-          label: `${se.name} (${se.email})`
-        }));
-      }
-
-      // Call the API to search solutions engineers
-      const response = await fetch(`/api/admin/solutions-engineers/search?q=${encodeURIComponent(query)}&limit=5`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch solutions engineers');
-      }
-
-      const data = await response.json();
+      // Use React Query to fetch and cache solutions engineers
+      const result = await queryClient.fetchQuery({
+        queryKey: ['solutionsEngineers', query],
+        queryFn: async () => {
+          // If query is empty and we have cached data, use it
+          if (!query.trim() && solutionsEngineers && solutionsEngineers.length > 0) {
+            return { users: solutionsEngineers };
+          }
+          
+          const response = await fetch(`/api/admin/solutions-engineers/search?q=${encodeURIComponent(query)}&limit=5`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch solutions engineers');
+          }
+          return response.json();
+        },
+        staleTime: 30000, // 30 seconds
+      });
 
       // Map API response to options format
-      return data.users.map((se: any) => ({
+      return result.users.map((se: any) => ({
         value: se._id,
         label: `${se.name} (${se.email})`
       }));

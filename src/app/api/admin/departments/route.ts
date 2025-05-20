@@ -24,7 +24,20 @@ export async function GET(request: NextRequest) {
       return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
-    const departments = await Department.find().sort({ name: 1 });
+    // Get search parameters
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get('q') || '';
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10;
+    
+    // Build query
+    let dbQuery = {};
+    if (query) {
+      dbQuery = { name: { $regex: query, $options: 'i' } };
+    }
+    
+    const departments = await Department.find(dbQuery)
+      .sort({ name: 1 })
+      .limit(limit);
     
     return NextResponse.json({ departments });
   } catch (error) {
