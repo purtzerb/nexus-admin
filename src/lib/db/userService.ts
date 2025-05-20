@@ -1,5 +1,15 @@
-import User from '../models/User';
+import User, { IUser } from '@/models/User';
 import dbConnect from './db';
+import mongoose from 'mongoose';
+
+// Define types for function parameters
+type FilterQuery = Record<string, any>;
+
+interface QueryOptions {
+  sort?: Record<string, 1 | -1>;
+  limit?: number;
+  skip?: number;
+}
 
 /**
  * User service for handling user-related operations
@@ -11,16 +21,16 @@ export const userService = {
    * @param {Object} options - Query options (sort, limit, skip)
    * @returns {Promise<Array>} Array of user documents
    */
-  async getUsers(filter = {}, options = {}) {
+  async getUsers(filter: FilterQuery = {}, options: QueryOptions = {}) {
     await dbConnect();
-    
+
     const { sort, limit, skip } = options;
     let query = User.find(filter);
-    
+
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
     if (skip) query = query.skip(skip);
-    
+
     return query.lean();
   },
 
@@ -29,7 +39,7 @@ export const userService = {
    * @param {string} userId - User ID
    * @returns {Promise<Object>} User document
    */
-  async getUserById(userId) {
+  async getUserById(userId: string) {
     await dbConnect();
     return User.findById(userId).lean();
   },
@@ -39,7 +49,7 @@ export const userService = {
    * @param {string} email - User email
    * @returns {Promise<Object>} User document
    */
-  async getUserByEmail(email) {
+  async getUserByEmail(email: string) {
     await dbConnect();
     return User.findOne({ email: email.toLowerCase() }).lean();
   },
@@ -49,7 +59,7 @@ export const userService = {
    * @param {Object} userData - User data
    * @returns {Promise<Object>} Created user document
    */
-  async createUser(userData) {
+  async createUser(userData: Partial<IUser>) {
     await dbConnect();
     const user = new User(userData);
     return user.save();
@@ -61,7 +71,7 @@ export const userService = {
    * @param {Object} updateData - Data to update
    * @returns {Promise<Object>} Updated user document
    */
-  async updateUser(userId, updateData) {
+  async updateUser(userId: string, updateData: Partial<IUser>) {
     await dbConnect();
     return User.findByIdAndUpdate(
       userId,
@@ -75,7 +85,7 @@ export const userService = {
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Deleted user document
    */
-  async deleteUser(userId) {
+  async deleteUser(userId: string) {
     await dbConnect();
     return User.findByIdAndDelete(userId).lean();
   },
@@ -85,7 +95,7 @@ export const userService = {
    * @param {string} role - User role (ADMIN, SOLUTIONS_ENGINEER, CLIENT_USER)
    * @returns {Promise<Array>} Array of user documents
    */
-  async getUsersByRole(role) {
+  async getUsersByRole(role: 'ADMIN' | 'SOLUTIONS_ENGINEER' | 'CLIENT_USER') {
     await dbConnect();
     return User.find({ role }).lean();
   },
@@ -95,9 +105,9 @@ export const userService = {
    * @param {string} clientId - Client ID
    * @returns {Promise<Array>} Array of client user documents
    */
-  async getClientUsers(clientId) {
+  async getClientUsers(clientId: string) {
     await dbConnect();
-    return User.find({ 
+    return User.find({
       role: 'CLIENT_USER',
       clientId
     }).lean();
@@ -108,7 +118,7 @@ export const userService = {
    * @param {string} clientId - Client ID
    * @returns {Promise<Array>} Array of solutions engineer documents
    */
-  async getSolutionsEngineersForClient(clientId) {
+  async getSolutionsEngineersForClient(clientId: string) {
     await dbConnect();
     return User.find({
       role: 'SOLUTIONS_ENGINEER',

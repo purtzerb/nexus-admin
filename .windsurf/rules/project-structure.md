@@ -5,6 +5,8 @@ description: When creating or editing files
 
 Directory Adherence (App Router):
 
+All imports should use '@/' imports. This maps to the src folder.
+
 Use the app directory for all routes (pages and API endpoints).
 
 Pages are defined by page.js, page.jsx, or page.tsx files.
