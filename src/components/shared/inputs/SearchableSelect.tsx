@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface Option {
   value: string;
   label: string;
   highlightedLabel?: React.ReactNode;
-  score?: number;
 }
 
 interface SearchableSelectProps {
@@ -16,6 +15,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   emptyMessage?: string;
   debounceMs?: number;
+  initialOptions?: Option[];
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -27,6 +27,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   disabled = false,
   emptyMessage = 'No results found',
   debounceMs = 250,
+  initialOptions = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +36,12 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const [selectedLabel, setSelectedLabel] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTermRef = useRef(searchTerm);
+
+  // Update searchTermRef when searchTerm changes
+  useEffect(() => {
+    searchTermRef.current = searchTerm;
+  }, [searchTerm]);
 
   // Handle outside click to close dropdown
   useEffect(() => {
@@ -50,28 +57,44 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     };
   }, []);
 
+  // Set initial options
+  useEffect(() => {
+    if (initialOptions.length > 0 && options.length === 0) {
+      setOptions(initialOptions);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Set the selected label when value changes
   useEffect(() => {
+    // First check initialOptions
+    const initialOption = initialOptions.find(option => option.value === value);
+    if (initialOption) {
+      setSelectedLabel(initialOption.label);
+      return;
+    }
+
+    // Then check current options
     const selectedOption = options.find(option => option.value === value);
     if (selectedOption) {
       setSelectedLabel(selectedOption.label);
     } else if (!value) {
       setSelectedLabel('');
     }
-  }, [value, options]);
+  }, [value, initialOptions, options]);
 
   // Helper function to highlight matching text in search results
-  const highlightMatches = (text: string, query: string): React.ReactNode => {
+  const highlightMatches = useCallback((text: string, query: string): React.ReactNode => {
     if (!query.trim()) return text;
-    
+
     const parts = [];
     let lastIndex = 0;
     const textLower = text.toLowerCase();
     const queryTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
-    
+
     // Create a map to track which parts of the text have been highlighted
     const highlightMap = new Array(text.length).fill(false);
-    
+
     // For each search term, find and mark all occurrences in the text
     queryTerms.forEach(term => {
       let startIndex = 0;
@@ -84,18 +107,18 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         startIndex = index + term.length;
       }
     });
-    
+
     // Now go through the text and create highlighted spans based on the map
     let inHighlight = false;
     let currentChunk = '';
-    
+
     for (let i = 0; i < text.length; i++) {
       if (highlightMap[i] !== inHighlight) {
         // We're transitioning between highlight and non-highlight
         if (currentChunk) {
           parts.push(
-            inHighlight ? 
-              <span key={lastIndex} className="bg-yellow-200 font-medium">{currentChunk}</span> : 
+            inHighlight ?
+              <span key={lastIndex} className="bg-yellow-200 font-medium">{currentChunk}</span> :
               currentChunk
           );
           lastIndex++;
@@ -107,22 +130,23 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         currentChunk += text[i];
       }
     }
-    
+
     // Add the last chunk
     if (currentChunk) {
       parts.push(
-        inHighlight ? 
-          <span key={lastIndex} className="bg-yellow-200 font-medium">{currentChunk}</span> : 
+        inHighlight ?
+          <span key={lastIndex} className="bg-yellow-200 font-medium">{currentChunk}</span> :
           currentChunk
       );
     }
-    
+
     return <>{parts}</>;
-  };
+  }, []);
 
   // Perform search with debouncing
-  useEffect(() => {
-    if (!searchTerm && !isOpen) return;
+  const performSearch = useCallback(() => {
+    if (!onSearch) return;
+    if (!searchTermRef.current && !isOpen) return;
 
     setIsLoading(true);
 
@@ -132,20 +156,19 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        let results = await onSearch(searchTerm);
-        
-        // Add highlighting to results
-        results = results.map(option => ({
-          ...option,
-          highlightedLabel: highlightMatches(option.label, searchTerm),
-        }));
-        
-        // Sort by score if available
-        if (results.length > 0 && results[0].score !== undefined) {
-          results.sort((a, b) => (b.score || 0) - (a.score || 0));
+        const currentSearchTerm = searchTermRef.current;
+        const results = await onSearch(currentSearchTerm);
+
+        // Only update if the search term hasn't changed during the request
+        if (currentSearchTerm === searchTermRef.current) {
+          // Add highlighting to results
+          const highlightedResults = results.map(option => ({
+            ...option,
+            highlightedLabel: highlightMatches(option.label, currentSearchTerm),
+          }));
+
+          setOptions(highlightedResults.slice(0, 5)); // Limit to 5 results
         }
-        
-        setOptions(results.slice(0, 5)); // Limit to 5 results
       } catch (error) {
         console.error('Search error:', error);
         setOptions([]);
@@ -153,32 +176,33 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         setIsLoading(false);
       }
     }, debounceMs);
+  }, [onSearch, isOpen, debounceMs, highlightMatches]);
 
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [searchTerm, onSearch, debounceMs, isOpen]);
+  // Trigger search when searchTerm changes
+  useEffect(() => {
+    if (searchTerm.trim().length > 0 || isOpen) {
+      performSearch();
+    }
+  }, [searchTerm, isOpen, performSearch]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-  };
+  }, []);
 
-  const handleOptionSelect = (option: Option) => {
+  const handleOptionSelect = useCallback((option: Option) => {
     onChange(option.value);
     setSelectedLabel(option.label);
     setSearchTerm('');
     setIsOpen(false);
-  };
+  }, [onChange]);
 
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     setIsOpen(true);
     // Initial search when dropdown opens
-    if (options.length === 0 && !searchTerm) {
+    if (options.length === 0 && !searchTerm && initialOptions.length === 0) {
       setSearchTerm(' '); // Trigger search with empty space
     }
-  };
+  }, [options.length, searchTerm, initialOptions.length]);
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
@@ -218,7 +242,9 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-buttonBorder rounded shadow-lg max-h-60 overflow-auto">
-          {options.length > 0 ? (
+          {isLoading ? (
+            <div className="px-3 py-2 text-gray-500">Loading...</div>
+          ) : options.length > 0 ? (
             options.map((option) => (
               <div
                 key={option.value}

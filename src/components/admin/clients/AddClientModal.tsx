@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -14,7 +12,6 @@ import { TextInput } from '@/components/shared/inputs';
 // Define interfaces for client data
 interface ClientDepartment {
   name: string;
-  _id?: string;
 }
 
 interface ClientUser {
@@ -30,7 +27,6 @@ interface ClientUser {
     billing?: boolean;
     admin?: boolean;
   };
-  _id?: string;
 }
 
 interface SolutionsEngineer {
@@ -39,56 +35,35 @@ interface SolutionsEngineer {
   email: string;
 }
 
-interface Client {
-  _id: string;
-  companyName: string;
-  companyUrl?: string;
-  departments?: ClientDepartment[];
-  users?: ClientUser[];
-  assignedSolutionsEngineerIds?: string[];
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
-  industry?: string;
-  contactName?: string;
-}
-
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  client?: Client | null;
-  mode: 'create' | 'update';
+  onSuccess?: () => void;
+  client?: any;
+  mode?: 'create' | 'update';
 }
-
-// Fetch solutions engineers function
-const fetchSolutionsEngineers = async (): Promise<SolutionsEngineer[]> => {
-  const response = await fetch('/api/admin/solutions-engineers');
-  if (!response.ok) {
-    throw new Error('Failed to fetch solutions engineers');
-  }
-  const data = await response.json();
-  return data.users;
-};
 
 const AddClientModal: React.FC<AddClientModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  onClientAdded,
   client,
-  mode
+  mode = 'create',
 }) => {
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitError, setSubmitError] = useState('');
 
-  // Form state
+  // Client form state
   const [companyName, setCompanyName] = useState('');
   const [companyUrl, setCompanyUrl] = useState('');
-  const [departmentName, setDepartmentName] = useState('');
-  const [departments, setDepartments] = useState<ClientDepartment[]>([]);
 
-  // User form state
+  // Department management
+  const [departments, setDepartments] = useState<ClientDepartment[]>([]);
+  const [departmentName, setDepartmentName] = useState('');
+
+  // User management
+  const [users, setUsers] = useState<ClientUser[]>([]);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userPhone, setUserPhone] = useState('');
@@ -97,48 +72,101 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   const [userSmsException, setUserSmsException] = useState(false);
   const [userBillingAccess, setUserBillingAccess] = useState(false);
   const [userAdminAccess, setUserAdminAccess] = useState(false);
-  const [users, setUsers] = useState<ClientUser[]>([]);
 
-  // SE form state
-  const [selectedSE, setSelectedSE] = useState<string>('');
+  // Solutions Engineer assignment
+  const [selectedSE, setSelectedSE] = useState('');
   const [assignedSEs, setAssignedSEs] = useState<string[]>([]);
 
   // Fetch solutions engineers
-  const { data: solutionsEngineers } = useQuery({
+  const { data: solutionsEngineers } = useQuery<SolutionsEngineer[]>({
     queryKey: ['solutionsEngineers'],
-    queryFn: fetchSolutionsEngineers
+    queryFn: async () => {
+      const response = await fetch('/api/admin/solutions-engineers');
+      if (!response.ok) {
+        throw new Error('Failed to fetch solutions engineers');
+      }
+      const data = await response.json();
+      return data.users;
+    },
+    enabled: isOpen,
   });
 
-  // Reset form when modal opens/closes or client changes
+  // Reset form when modal is opened/closed
   useEffect(() => {
-    if (isOpen && mode === 'update' && client) {
-      setCompanyName(client.companyName || '');
-      setCompanyUrl(client.companyUrl || '');
-      setDepartments(client.departments || []);
-      setUsers(client.users || []);
-      setAssignedSEs(client.assignedSolutionsEngineerIds || []);
-    } else if (isOpen && mode === 'create') {
-      setCompanyName('');
-      setCompanyUrl('');
-      setDepartments([]);
-      setUsers([]);
-      setAssignedSEs([]);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  // Reset form to initial state
+  const resetForm = () => {
+    setCompanyName('');
+    setCompanyUrl('');
+    setDepartments([]);
+    setDepartmentName('');
+    setUsers([]);
+    setUserName('');
+    setUserEmail('');
+    setUserPhone('');
+    setUserDepartment('');
+    setUserEmailException(false);
+    setUserSmsException(false);
+    setUserBillingAccess(false);
+    setUserAdminAccess(false);
+    setSelectedSE('');
+    setAssignedSEs([]);
+  };
+
+  // Handle adding a department
+  const handleAddDepartment = () => {
+    if (!departmentName.trim()) return;
+
+    // Check if department already exists
+    if (departments.some(dept => dept.name.toLowerCase() === departmentName.trim().toLowerCase())) {
+      showToast('Department already exists', 'error');
+      return;
     }
 
-    // Reset user form
-    resetUserForm();
-
-    // Reset department form
+    setDepartments([...departments, { name: departmentName.trim() }]);
     setDepartmentName('');
+  };
 
-    // Reset SE form
-    setSelectedSE('');
+  // Handle removing a department
+  const handleRemoveDepartment = (index: number) => {
+    setDepartments(departments.filter((_, i) => i !== index));
+  };
 
-    setErrors({});
-    setSubmitError('');
-  }, [isOpen, client, mode]);
+  // Handle adding a user
+  const handleAddUser = () => {
+    if (!userName.trim() || !userEmail.trim()) {
+      showToast('Name and email are required', 'error');
+      return;
+    }
 
-  const resetUserForm = () => {
+    // Check if user with same email already exists
+    if (users.some(user => user.email.toLowerCase() === userEmail.trim().toLowerCase())) {
+      showToast('User with this email already exists', 'error');
+      return;
+    }
+
+    const newUser: ClientUser = {
+      name: userName.trim(),
+      email: userEmail.trim().toLowerCase(),
+      phone: userPhone.trim() || undefined,
+      department: userDepartment || undefined,
+      exceptions: {
+        email: userEmailException,
+        sms: userSmsException,
+      },
+      access: {
+        billing: userBillingAccess,
+        admin: userAdminAccess,
+      },
+    };
+
+    setUsers([...users, newUser]);
+
+    // Reset user form
     setUserName('');
     setUserEmail('');
     setUserPhone('');
@@ -149,54 +177,21 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     setUserAdminAccess(false);
   };
 
-  // Handle adding a department
-  const handleAddDepartment = () => {
-    if (!departmentName.trim()) return;
-
-    setDepartments([...departments, { name: departmentName }]);
-    setDepartmentName('');
-  };
-
-  // Handle removing a department
-  const handleRemoveDepartment = (index: number) => {
-    const updatedDepartments = [...departments];
-    updatedDepartments.splice(index, 1);
-    setDepartments(updatedDepartments);
-  };
-
-  // Handle adding a user
-  const handleAddUser = () => {
-    if (!userName.trim() || !userEmail.trim()) return;
-
-    const newUser: ClientUser = {
-      name: userName,
-      email: userEmail,
-      phone: userPhone,
-      department: userDepartment,
-      exceptions: {
-        email: userEmailException,
-        sms: userSmsException
-      },
-      access: {
-        billing: userBillingAccess,
-        admin: userAdminAccess
-      }
-    };
-
-    setUsers([...users, newUser]);
-    resetUserForm();
-  };
-
   // Handle removing a user
   const handleRemoveUser = (index: number) => {
-    const updatedUsers = [...users];
-    updatedUsers.splice(index, 1);
-    setUsers(updatedUsers);
+    setUsers(users.filter((_, i) => i !== index));
   };
 
   // Handle adding a solutions engineer
   const handleAddSE = () => {
-    if (!selectedSE || assignedSEs.includes(selectedSE)) return;
+    if (!selectedSE) return;
+
+    // Check if SE is already assigned
+    if (assignedSEs.includes(selectedSE)) {
+      showToast('Solutions Engineer already assigned', 'error');
+      return;
+    }
+
     setAssignedSEs([...assignedSEs, selectedSE]);
     setSelectedSE('');
   };
@@ -210,61 +205,129 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!companyName) {
-      setSubmitError('Company name is required');
+    if (!companyName.trim()) {
+      showToast('Company name is required', 'error');
       return;
     }
 
-    setIsSubmitting(true);
-    setErrors({});
-    setSubmitError('');
-
-    const clientData = {
-      companyName,
-      companyUrl,
-      departments,
-      users,
-      assignedSolutionsEngineerIds: assignedSEs
-    };
-
     try {
-      const url = mode === 'create'
-        ? '/api/admin/clients'
-        : `/api/admin/clients/${client?._id}`;
+      const clientData = {
+        companyName: companyName.trim(),
+        companyUrl: companyUrl.trim() || undefined,
+        departments,
+        users,
+        assignedSolutionsEngineerIds: assignedSEs,
+      };
 
-      const method = mode === 'create' ? 'POST' : 'PUT';
-
-      const response = await fetch(url, {
-        method,
+      const response = await fetch('/api/admin/clients', {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(clientData)
+        body: JSON.stringify(clientData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save client');
+        throw new Error(errorData.error || 'Failed to create client');
       }
 
-      // Show success toast
-      showToast(
-        mode === 'create' ? 'Client created successfully' : 'Client updated successfully',
-        'success'
-      );
-
-      // Invalidate clients query to refresh data
+      showToast('Client added successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['clients'] });
 
-      // Close modal and notify parent of success
-      onSuccess();
+      // Call the appropriate callback
+      if (onSuccess) {
+        onSuccess();
+      } else if (onClientAdded) {
+        onClientAdded();
+      }
+
       onClose();
     } catch (error) {
-      console.error('Error saving client:', error);
       handleApiError(error);
-      setSubmitError(error instanceof Error ? error.message : 'An unknown error occurred');
-    } finally {
-      setIsSubmitting(false);
+    }
+  };
+
+  // Search functions for SearchableSelect components
+  const searchDepartments = async (query: string): Promise<Option[]> => {
+    try {
+      // Use local departments if available and query is empty
+      if (!query.trim() && departments.length > 0) {
+        return departments.map(dept => ({
+          value: dept.name,
+          label: dept.name
+        }));
+      }
+
+      // Call the API to search departments
+      const response = await fetch(`/api/admin/departments/search?q=${encodeURIComponent(query)}&limit=5`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch departments');
+      }
+
+      const data = await response.json();
+
+      // Map API response to options format
+      return data.departments.map((dept: any) => ({
+        value: dept.name,
+        label: dept.clientCount ? `${dept.name} (${dept.clientCount} clients)` : dept.name
+      }));
+    } catch (error) {
+      console.error('Error searching departments:', error);
+
+      // Fallback to local filtering if API fails
+      if (departments.length > 0) {
+        return departments
+          .filter(dept => dept.name.toLowerCase().includes(query.toLowerCase()))
+          .map(dept => ({ value: dept.name, label: dept.name }));
+      }
+
+      return [];
+    }
+  };
+
+  const searchSolutionsEngineers = async (query: string): Promise<Option[]> => {
+    try {
+      // Use local SEs if available and query is empty
+      if (!query.trim() && solutionsEngineers && solutionsEngineers.length > 0) {
+        return solutionsEngineers.map(se => ({
+          value: se._id,
+          label: `${se.name} (${se.email})`
+        }));
+      }
+
+      // Call the API to search solutions engineers
+      const response = await fetch(`/api/admin/solutions-engineers/search?q=${encodeURIComponent(query)}&limit=5`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch solutions engineers');
+      }
+
+      const data = await response.json();
+
+      // Map API response to options format
+      return data.users.map((se: any) => ({
+        value: se._id,
+        label: `${se.name} (${se.email})`
+      }));
+    } catch (error) {
+      console.error('Error searching solutions engineers:', error);
+
+      // Fallback to local filtering if API fails
+      if (solutionsEngineers && solutionsEngineers.length > 0) {
+        return solutionsEngineers
+          .filter(se =>
+            se.name.toLowerCase().includes(query.toLowerCase()) ||
+            se.email.toLowerCase().includes(query.toLowerCase())
+          )
+          .map(se => ({
+            value: se._id,
+            label: `${se.name} (${se.email})`
+          }));
+      }
+
+      return [];
     }
   };
 
@@ -273,45 +336,55 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={mode === 'create' ? 'Add New Client' : 'Edit Client'}
-      maxWidth="5xl"
-    >
+      maxWidth="6xl">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Column - Company Information */}
-          <div className="space-y-4">
-            <TextInput
-              id="companyName"
-              label="Company Name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Enter company name"
-              required
-            />
-
-            <TextInput
-              id="companyUrl"
-              label="Company URL"
-              value={companyUrl}
-              onChange={(e) => setCompanyUrl(e.target.value)}
-              placeholder="https://"
-              type="url"
-              required
-            />
-          </div>
-
-          {/* Right Column - Manage Departments */}
-          <div>
-            <h4 className="text-md font-medium mb-2">Manage Departments</h4>
-            <div className="bg-darkerBackground p-4 rounded">
-              <div className="flex items-center mb-2">
+        {/* Company Information Section */}
+        <div>
+          <h4 className="text-md font-medium mb-2">Company Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="mb-4">
+                <label htmlFor="companyName" className="block text-sm font-medium mb-1">
+                  Company Name <span className="text-error">*</span>
+                </label>
                 <input
+                  id="companyName"
                   type="text"
-                  value={departmentName}
-                  onChange={(e) => setDepartmentName(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
-                  placeholder="Department name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
+                  required
                 />
-                {departmentName && (
+              </div>
+              <div className="mb-4">
+                <label htmlFor="companyUrl" className="block text-sm font-medium mb-1">
+                  Company URL
+                </label>
+                <input
+                  id="companyUrl"
+                  type="url"
+                  value={companyUrl}
+                  onChange={(e) => setCompanyUrl(e.target.value)}
+                  className="w-full px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
+                />
+              </div>
+            </div>
+
+            <div>
+              {/* Manage Departments */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">
+                  Manage Departments
+                </label>
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={departmentName}
+                    onChange={(e) => setDepartmentName(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-buttonBorder rounded-l focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
+                    placeholder="Department name"
+                  />
+                  {departmentName && (
                   <button
                     type="button"
                     onClick={() => setDepartmentName('')}
@@ -341,7 +414,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                     className="text-error"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                   </button>
                 </div>
@@ -349,10 +422,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
           </div>
         </div>
+        </div>
 
         {/* Users Section */}
         <div>
-          <h4 className="text-md font-medium mb-2">Users</h4>
+          <h4 className="text-md font-medium mb-2">Add Users</h4>
 
           {/* Users Table */}
           <div className="mb-4">
@@ -400,54 +474,13 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 <SearchableSelect
                   value={userDepartment}
                   onChange={setUserDepartment}
-                  onSearch={async (query) => {
-                    if (!query.trim()) {
-                      return departments.map(dept => ({ value: dept.name, label: dept.name }));
-                    }
-                    
-                    const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
-                    
-                    // Calculate score for each department based on match quality
-                    return departments
-                      .map(dept => {
-                        const deptNameLower = dept.name.toLowerCase();
-                        let score = 0;
-                        
-                        // Check for exact match (highest priority)
-                        if (deptNameLower === query.toLowerCase()) {
-                          score += 100;
-                        }
-                        
-                        // Check for starts with match (high priority)
-                        if (deptNameLower.startsWith(query.toLowerCase())) {
-                          score += 50;
-                        }
-                        
-                        // Check for individual term matches
-                        searchTerms.forEach(term => {
-                          // Full word match
-                          if (deptNameLower.includes(` ${term} `) || 
-                              deptNameLower.startsWith(`${term} `) || 
-                              deptNameLower.endsWith(` ${term}`)) {
-                            score += 30;
-                          }
-                          // Partial match
-                          else if (deptNameLower.includes(term)) {
-                            score += 10;
-                          }
-                        });
-                        
-                        return { 
-                          value: dept.name, 
-                          label: dept.name,
-                          score: score
-                        };
-                      })
-                      .filter(item => item.score > 0)
-                      .sort((a, b) => b.score - a.score);
-                  }}
+                  onSearch={searchDepartments}
                   placeholder="Select Department"
                   emptyMessage="No departments found"
+                  initialOptions={departments.map(dept => ({
+                    value: dept.name,
+                    label: dept.name
+                  }))}
                 />
               </div>
               <div className="flex flex-col space-y-1 ml-2 justify-center">
@@ -547,69 +580,13 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               <SearchableSelect
                 value={selectedSE}
                 onChange={setSelectedSE}
-                onSearch={async (query) => {
-                  if (!query.trim()) {
-                    return solutionsEngineers?.map(se => ({ 
-                      value: se._id, 
-                      label: `${se.name} (${se.email})` 
-                    })) || [];
-                  }
-                  
-                  const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
-                  
-                  // Calculate score for each SE based on match quality
-                  return solutionsEngineers
-                    ?.map(se => {
-                      const nameLower = se.name.toLowerCase();
-                      const emailLower = se.email.toLowerCase();
-                      const fullTextLower = `${nameLower} ${emailLower}`.toLowerCase();
-                      let score = 0;
-                      
-                      // Check for exact matches (highest priority)
-                      if (nameLower === query.toLowerCase()) {
-                        score += 100;
-                      }
-                      if (emailLower === query.toLowerCase()) {
-                        score += 90;
-                      }
-                      
-                      // Check for starts with matches (high priority)
-                      if (nameLower.startsWith(query.toLowerCase())) {
-                        score += 50;
-                      }
-                      if (emailLower.startsWith(query.toLowerCase())) {
-                        score += 40;
-                      }
-                      
-                      // Check for individual term matches
-                      searchTerms.forEach(term => {
-                        // Name matches (higher priority)
-                        if (nameLower.includes(` ${term} `) || 
-                            nameLower.startsWith(`${term} `) || 
-                            nameLower.endsWith(` ${term}`)) {
-                          score += 30;
-                        }
-                        else if (nameLower.includes(term)) {
-                          score += 20;
-                        }
-                        
-                        // Email matches
-                        if (emailLower.includes(term)) {
-                          score += 15;
-                        }
-                      });
-                      
-                      return { 
-                        value: se._id, 
-                        label: `${se.name} (${se.email})`,
-                        score: score
-                      };
-                    })
-                    .filter(item => item.score > 0)
-                    .sort((a, b) => b.score - a.score) || [];
-                }}
+                onSearch={searchSolutionsEngineers}
                 placeholder="Search by name or email"
                 emptyMessage="No solutions engineers found"
+                initialOptions={solutionsEngineers?.map(se => ({
+                  value: se._id,
+                  label: `${se.name} (${se.email})`
+                })) || []}
               />
             </div>
             <div>
@@ -658,25 +635,20 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           </div>
         </div>
 
-        {submitError && (
-          <div className="text-error text-sm">{submitError}</div>
-        )}
-
-        <div className="flex justify-end space-x-3">
+        {/* Form Actions */}
+        <div className="flex justify-end space-x-3 pt-4 border-t border-buttonBorder">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-buttonBorder rounded text-textPrimary hover:bg-darkerBackground transition-colors duration-200"
-            disabled={isSubmitting}
+            className="px-4 py-2 border border-buttonBorder rounded hover:bg-darkerBackground transition-colors duration-200"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-buttonPrimary text-white rounded hover:opacity-90 transition-opacity duration-200"
-            disabled={isSubmitting || !isAdmin}
+            className="px-4 py-2 bg-buttonPrimary text-white rounded hover:bg-buttonPrimaryHover transition-colors duration-200"
           >
-            {isSubmitting ? 'Processing...' : (mode === 'create' ? 'Create Client' : 'Update Client')}
+            {mode === 'create' ? 'Add Client' : 'Update Client'}
           </button>
         </div>
       </form>
