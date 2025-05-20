@@ -270,7 +270,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       isOpen={isOpen} 
       onClose={onClose} 
       title={mode === 'create' ? 'Add New Client' : 'Edit Client'}
-      maxWidth="2xl"
+      maxWidth="5xl"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-2 gap-6">
