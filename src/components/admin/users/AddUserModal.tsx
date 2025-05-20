@@ -1,16 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Client } from '@/types';
 import toast from 'react-hot-toast';
 import { showToast, handleApiError } from '@/lib/toast/toastUtils';
 import Modal from '@/components/ui/Modal';
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'ADMIN' | 'SOLUTIONS_ENGINEER' | 'CLIENT_USER';
+  costRate?: number;
+  billRate?: number;
+  assignedClientIds?: string[];
+}
+
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  user?: User | null; // If provided, we're in edit mode
+  mode?: 'create' | 'update';
 }
 
 const fetchClients = async (): Promise<Client[]> => {
@@ -22,8 +35,10 @@ const fetchClients = async (): Promise<Client[]> => {
   return data.clients;
 };
 
-const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [userType, setUserType] = useState<'ADMIN' | 'SE'>('ADMIN');
+const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess, user = null, mode = 'create' }) => {
+  const isEditMode = mode === 'update' && user !== null;
+  const initialUserType = user?.role === 'ADMIN' ? 'ADMIN' : 'SE';
+  const [userType, setUserType] = useState<'ADMIN' | 'SE'>(initialUserType || 'ADMIN');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,6 +52,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: clients, isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
@@ -44,23 +60,40 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
     enabled: userType === 'SE' && isOpen, // Only fetch clients when adding an SE
   });
 
-  // Reset form when modal opens or userType changes
+  // Initialize form data when modal opens, userType changes, or user (for edit) changes
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        name: '',
-        email: '',
-        password: '',
-        phone: '',
-        role: userType === 'ADMIN' ? 'ADMIN' : 'SOLUTIONS_ENGINEER',
-        costRate: '',
-        billRate: '',
-        assignedClientIds: []
-      });
+      if (isEditMode && user) {
+        // In edit mode, populate form with user data
+        setFormData({
+          name: user.name || '',
+          email: user.email || '',
+          password: '', // Don't populate password for security reasons
+          phone: user.phone || '',
+          role: user.role,
+          costRate: user.costRate?.toString() || '',
+          billRate: user.billRate?.toString() || '',
+          assignedClientIds: user.assignedClientIds || []
+        });
+        // Set user type based on role
+        setUserType(user.role === 'ADMIN' ? 'ADMIN' : 'SE');
+      } else {
+        // In create mode, reset form
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          phone: '',
+          role: userType === 'ADMIN' ? 'ADMIN' : 'SOLUTIONS_ENGINEER',
+          costRate: '',
+          billRate: '',
+          assignedClientIds: []
+        });
+      }
       setErrors({});
       setSubmitError('');
     }
-  }, [isOpen, userType]);
+  }, [isOpen, userType, user, isEditMode]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -139,15 +172,21 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
     setIsSubmitting(true);
     setSubmitError('');
     
+    const isUpdate = isEditMode && user;
+    const action = isUpdate ? 'Updating' : 'Creating';
+    
     // Show loading toast
     const loadingToastId = showToast(
-      `Creating ${userType === 'ADMIN' ? 'admin' : 'solutions engineer'} user...`,
+      `${action} ${userType === 'ADMIN' ? 'admin' : 'solutions engineer'} user...`,
       'loading'
     );
     
     try {
-      // Determine the API endpoint based on user type
-      const endpoint = userType === 'ADMIN' ? '/api/admin/users' : '/api/admin/solutions-engineers';
+      // Determine the API endpoint based on user type and action
+      let endpoint = userType === 'ADMIN' ? '/api/admin/users' : '/api/admin/solutions-engineers';
+      if (isUpdate && user) {
+        endpoint = `${endpoint}/${user._id}`;
+      }
       
       // Prepare the data to send
       const userData: any = {
@@ -156,12 +195,12 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
         phone: formData.phone,
       };
       
-      // Only include password if it's provided
+      // Only include password if it's provided (for both create and update)
       if (formData.password) {
         userData.password = formData.password;
       }
       
-      // Add SE-specific fields if creating an SE user
+      // Add SE-specific fields if creating/updating an SE user
       if (userType === 'SE') {
         userData.costRate = Number(formData.costRate);
         userData.billRate = Number(formData.billRate);
@@ -169,7 +208,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
       }
       
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: isUpdate ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -178,13 +217,27 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create user');
+        throw new Error(errorData.error || `Failed to ${isUpdate ? 'update' : 'create'} user`);
+      }
+      
+      const responseData = await response.json();
+      
+      // Update React Query cache for instant UI update
+      if (isUpdate && user) {
+        // For update, update the specific user in the cache
+        const queryKey = userType === 'ADMIN' ? 'adminUsers' : 'seUsers';
+        queryClient.setQueryData([queryKey], (oldData: any) => {
+          if (!oldData) return oldData;
+          return oldData.map((oldUser: any) => 
+            oldUser._id === user._id ? { ...oldUser, ...responseData.user } : oldUser
+          );
+        });
       }
       
       // Dismiss loading toast and show success toast
       toast.dismiss(loadingToastId);
       showToast(
-        `${userType === 'ADMIN' ? 'Admin' : 'Solutions engineer'} user created successfully!`,
+        `${userType === 'ADMIN' ? 'Admin' : 'Solutions engineer'} user ${isUpdate ? 'updated' : 'created'} successfully!`,
         'success'
       );
       
@@ -193,9 +246,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
     } catch (error) {
       // Dismiss loading toast and show error toast
       toast.dismiss(loadingToastId);
-      handleApiError(error, 'Failed to create user');
+      handleApiError(error, `Failed to ${isUpdate ? 'update' : 'create'} user`);
       
-      console.error('Error creating user:', error);
+      console.error(`Error ${isUpdate ? 'updating' : 'creating'} user:`, error);
       setSubmitError(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
       setIsSubmitting(false);
@@ -203,24 +256,26 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New User" maxWidth="md">
-      {/* User Type Toggle */}
-      <div className="flex mb-6 border border-buttonBorder rounded overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setUserType('ADMIN')}
-          className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'ADMIN' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
-        >
-          Admin
-        </button>
-        <button
-          type="button"
-          onClick={() => setUserType('SE')}
-          className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'SE' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
-        >
-          Solutions Engineer
-        </button>
-      </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? 'Edit User' : 'Add New User'} maxWidth="md">
+      {/* User Type Toggle - Only show in create mode */}
+      {!isEditMode && (
+        <div className="flex mb-6 border border-buttonBorder rounded overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setUserType('ADMIN')}
+            className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'ADMIN' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
+          >
+            Admin
+          </button>
+          <button
+            type="button"
+            onClick={() => setUserType('SE')}
+            className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'SE' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
+          >
+            Solutions Engineer
+          </button>
+        </div>
+      )}
       
       {submitError && (
         <div className="mb-4 p-3 bg-error bg-opacity-10 border border-error rounded text-error text-sm">
@@ -376,7 +431,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
               className="px-4 py-2 bg-buttonPrimary text-textLight rounded"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create User'}
+              {isSubmitting 
+                ? (isEditMode ? 'Updating...' : 'Creating...') 
+                : (isEditMode ? 'Update User' : 'Create User')}
             </button>
           </div>
         </div>

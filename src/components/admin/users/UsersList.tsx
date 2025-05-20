@@ -39,7 +39,9 @@ const UsersList: React.FC = () => {
   const { user, isAdmin } = useAuth();
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'ADMIN' | 'SE'>('ADMIN');
 
   const { data: adminUsers, isLoading: isLoadingAdmins, isError: isErrorAdmins, refetch: refetchAdmins } = useQuery({
@@ -63,17 +65,24 @@ const UsersList: React.FC = () => {
     setIsAddUserModalOpen(false);
   };
   
+  const handleEditUser = (user: User) => {
+    setUserToEdit(user);
+    setIsEditUserModalOpen(true);
+  };
+  
+  const handleEditUserSuccess = () => {
+    // No need to refetch as we're using React Query cache updates
+    setIsEditUserModalOpen(false);
+    setUserToEdit(null);
+  };
+  
   const handleDeleteUser = (user: User) => {
     setUserToDelete(user);
     setIsDeleteUserModalOpen(true);
   };
   
   const handleDeleteUserSuccess = () => {
-    if (activeTab === 'ADMIN') {
-      refetchAdmins();
-    } else {
-      refetchSEs();
-    }
+    // No need to refetch as we're using React Query cache updates
     setIsDeleteUserModalOpen(false);
     setUserToDelete(null);
   };
@@ -208,7 +217,11 @@ const UsersList: React.FC = () => {
                     </>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-textPrimary hover:text-textSecondary mr-3">
+                    <button 
+                      onClick={() => handleEditUser(user)}
+                      className="text-textPrimary hover:text-textSecondary mr-3 transition-opacity duration-200"
+                      aria-label="Edit user"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                       </svg>
@@ -240,6 +253,18 @@ const UsersList: React.FC = () => {
         isOpen={isAddUserModalOpen}
         onClose={() => setIsAddUserModalOpen(false)}
         onSuccess={handleAddUserSuccess}
+        mode="create"
+      />
+      
+      <AddUserModal
+        isOpen={isEditUserModalOpen}
+        onClose={() => {
+          setIsEditUserModalOpen(false);
+          setUserToEdit(null);
+        }}
+        onSuccess={handleEditUserSuccess}
+        user={userToEdit}
+        mode="update"
       />
       
       <DeleteUserModal
