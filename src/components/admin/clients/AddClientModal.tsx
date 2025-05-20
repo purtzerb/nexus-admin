@@ -84,7 +84,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   const [companyUrl, setCompanyUrl] = useState('');
   const [departmentName, setDepartmentName] = useState('');
   const [departments, setDepartments] = useState<ClientDepartment[]>([]);
-  
+
   // User form state
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -95,7 +95,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   const [userBillingAccess, setUserBillingAccess] = useState(false);
   const [userAdminAccess, setUserAdminAccess] = useState(false);
   const [users, setUsers] = useState<ClientUser[]>([]);
-  
+
   // SE form state
   const [selectedSE, setSelectedSE] = useState<string>('');
   const [assignedSEs, setAssignedSEs] = useState<string[]>([]);
@@ -121,16 +121,16 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       setUsers([]);
       setAssignedSEs([]);
     }
-    
+
     // Reset user form
     resetUserForm();
-    
+
     // Reset department form
     setDepartmentName('');
-    
+
     // Reset SE form
     setSelectedSE('');
-    
+
     setErrors({});
     setSubmitError('');
   }, [isOpen, client, mode]);
@@ -149,7 +149,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   // Handle adding a department
   const handleAddDepartment = () => {
     if (!departmentName.trim()) return;
-    
+
     setDepartments([...departments, { name: departmentName }]);
     setDepartmentName('');
   };
@@ -164,7 +164,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   // Handle adding a user
   const handleAddUser = () => {
     if (!userName.trim() || !userEmail.trim()) return;
-    
+
     const newUser: ClientUser = {
       name: userName,
       email: userEmail,
@@ -179,7 +179,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
         admin: userAdminAccess
       }
     };
-    
+
     setUsers([...users, newUser]);
     resetUserForm();
   };
@@ -225,12 +225,12 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     };
 
     try {
-      const url = mode === 'create' 
-        ? '/api/admin/clients' 
+      const url = mode === 'create'
+        ? '/api/admin/clients'
         : `/api/admin/clients/${client?._id}`;
-      
+
       const method = mode === 'create' ? 'POST' : 'PUT';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -252,7 +252,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
 
       // Invalidate clients query to refresh data
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      
+
       // Close modal and notify parent of success
       onSuccess();
       onClose();
@@ -266,9 +266,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
       title={mode === 'create' ? 'Add New Client' : 'Edit Client'}
       maxWidth="5xl"
     >
@@ -284,7 +284,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               placeholder="Enter company name"
               required
             />
-            
+
             <TextInput
               id="companyUrl"
               label="Company URL"
@@ -295,12 +295,12 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               required
             />
           </div>
-          
+
           {/* Right Column - Manage Departments */}
           <div>
             <h4 className="text-md font-medium mb-2">Manage Departments</h4>
             <div className="bg-darkerBackground p-4 rounded">
-              <div className="flex mb-4">
+              <div className="flex items-center mb-2">
                 <input
                   type="text"
                   value={departmentName}
@@ -308,16 +308,27 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                   className="flex-1 px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
                   placeholder="Department name"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddDepartment}
-                  className="ml-2 flex items-center justify-center px-4 py-2 bg-buttonPrimary text-white rounded hover:opacity-90 transition-opacity duration-200"
-                >
-                  <span className="text-lg mr-1">+</span>
-                  Add Department
-                </button>
+                {departmentName && (
+                  <button
+                    type="button"
+                    onClick={() => setDepartmentName('')}
+                    className="ml-2 text-error"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
               </div>
-              
+              <button
+                type="button"
+                onClick={handleAddDepartment}
+                className="w-full flex items-center justify-center px-4 py-2 border border-buttonBorder bg-white rounded hover:bg-darkerBackground transition-colors duration-200"
+              >
+                <span className="text-lg mr-1">+</span>
+                Add Department
+              </button>
+
               {departments.map((dept, index) => (
                 <div key={index} className="flex items-center justify-between mb-2 last:mb-0">
                   <span>{dept.name}</span>
@@ -335,11 +346,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
           </div>
         </div>
-        
+
         {/* Users Section */}
         <div>
           <h4 className="text-md font-medium mb-2">Users</h4>
-          
+
           {/* Users Table */}
           <div className="mb-4">
             <div className="bg-darkerBackground rounded">
@@ -352,7 +363,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 <div className="font-medium text-sm">Access</div>
               </div>
             </div>
-            
+
             {/* User Input Row */}
             <div className="grid grid-cols-6 gap-2 p-2 items-end">
               <div>
@@ -394,7 +405,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                   ))}
                 </select>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-col space-y-1 justify-center">
                 <CheckboxInput
                   id="userEmailException"
                   label="Email"
@@ -408,7 +419,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                   onChange={(e) => setUserSmsException(e.target.checked)}
                 />
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-col space-y-1 justify-center">
                 <CheckboxInput
                   id="userBillingAccess"
                   label="Billing"
@@ -423,7 +434,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 />
               </div>
             </div>
-            
+
             {/* Add User Button */}
             <div className="mt-2">
               <button
@@ -431,11 +442,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 onClick={handleAddUser}
                 className="flex items-center px-4 py-2 bg-white border border-buttonBorder rounded hover:bg-darkerBackground transition-colors duration-200"
               >
-                <span className="text-lg mr-1">+</span>
+                <span className="mr-1">+</span>
                 Add User
               </button>
             </div>
-            
+
             {/* Users List */}
             {users.length > 0 && (
               <div className="mt-4 border-t border-buttonBorder pt-2">
@@ -462,7 +473,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                         className="text-error"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                       </button>
                     </div>
@@ -472,11 +483,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Assign Solutions Engineers Section */}
         <div>
           <h4 className="text-md font-medium mb-2">Assign Solutions Engineers</h4>
-          
+
           {/* SE Table Header */}
           <div className="bg-darkerBackground rounded">
             <div className="grid grid-cols-3 gap-2 p-2">
@@ -485,7 +496,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               <div className="font-medium text-sm">Actions</div>
             </div>
           </div>
-          
+
           {/* SE Input Row */}
           <div className="grid grid-cols-3 gap-2 p-2 items-center">
             <div>
@@ -504,18 +515,14 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               {selectedSE && solutionsEngineers?.find(se => se._id === selectedSE)?.email || 'email@example.com'}
             </div>
             <div>
-              <button
-                type="button"
-                onClick={handleAddSE}
-                className="text-error"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 9V5a1 1 0 012 0v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4z" clipRule="evenodd" />
+              <div className="text-error">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-              </button>
+              </div>
             </div>
           </div>
-          
+
           {/* Add SE Button */}
           <div className="mt-2">
             <button
@@ -523,11 +530,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               onClick={handleAddSE}
               className="flex items-center px-4 py-2 bg-white border border-buttonBorder rounded hover:bg-darkerBackground transition-colors duration-200"
             >
-              <span className="text-lg mr-1">+</span>
+              <span className="mr-1">+</span>
               Add Solutions Engineer
             </button>
           </div>
-          
+
           {/* SE List */}
           {assignedSEs.length > 0 && (
             <div className="mt-4 border-t border-buttonBorder pt-2">
@@ -544,7 +551,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                         className="text-error"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                       </button>
                     </div>
@@ -554,11 +561,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
           )}
         </div>
-        
+
         {submitError && (
           <div className="text-error text-sm">{submitError}</div>
         )}
-        
+
         <div className="flex justify-end space-x-3">
           <button
             type="button"
