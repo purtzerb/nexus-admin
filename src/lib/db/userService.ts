@@ -1,4 +1,5 @@
-import User, { IUser } from '@/models/User';
+import User, { IUser, LeanUserDocument } from '@/models/User';
+import { Document } from 'mongoose';
 import dbConnect from './db';
 import mongoose from 'mongoose';
 
@@ -21,7 +22,7 @@ export const userService = {
    * @param {Object} options - Query options (sort, limit, skip)
    * @returns {Promise<Array>} Array of user documents
    */
-  async getUsers(filter: FilterQuery = {}, options: QueryOptions = {}) {
+  async getUsers(filter: FilterQuery = {}, options: QueryOptions = {}): Promise<LeanUserDocument[]> {
     await dbConnect();
 
     const { sort, limit, skip } = options;
@@ -31,7 +32,7 @@ export const userService = {
     if (limit) query = query.limit(limit);
     if (skip) query = query.skip(skip);
 
-    return query.lean();
+    return query.lean() as unknown as LeanUserDocument[];
   },
 
   /**
@@ -39,9 +40,9 @@ export const userService = {
    * @param {string} userId - User ID
    * @returns {Promise<Object>} User document
    */
-  async getUserById(userId: string) {
+  async getUserById(userId: string): Promise<LeanUserDocument | null> {
     await dbConnect();
-    return User.findById(userId).lean();
+    return User.findById(userId).lean() as unknown as LeanUserDocument | null;
   },
 
   /**
@@ -49,9 +50,9 @@ export const userService = {
    * @param {string} email - User email
    * @returns {Promise<Object>} User document
    */
-  async getUserByEmail(email: string) {
+  async getUserByEmail(email: string): Promise<LeanUserDocument | null> {
     await dbConnect();
-    return User.findOne({ email: email.toLowerCase() }).lean();
+    return User.findOne({ email: email.toLowerCase() }).lean() as unknown as LeanUserDocument | null;
   },
 
   /**
@@ -71,13 +72,13 @@ export const userService = {
    * @param {Object} updateData - Data to update
    * @returns {Promise<Object>} Updated user document
    */
-  async updateUser(userId: string, updateData: Partial<IUser>) {
+  async updateUser(userId: string, updateData: Partial<IUser>): Promise<LeanUserDocument | null> {
     await dbConnect();
     return User.findByIdAndUpdate(
       userId,
       updateData,
       { new: true, runValidators: true }
-    ).lean();
+    ).lean() as unknown as LeanUserDocument | null;
   },
 
   /**
@@ -85,9 +86,9 @@ export const userService = {
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Deleted user document
    */
-  async deleteUser(userId: string) {
+  async deleteUser(userId: string): Promise<LeanUserDocument | null> {
     await dbConnect();
-    return User.findByIdAndDelete(userId).lean();
+    return User.findByIdAndDelete(userId).lean() as unknown as LeanUserDocument | null;
   },
 
   /**
@@ -95,9 +96,9 @@ export const userService = {
    * @param {string} role - User role (ADMIN, SOLUTIONS_ENGINEER, CLIENT_USER)
    * @returns {Promise<Array>} Array of user documents
    */
-  async getUsersByRole(role: 'ADMIN' | 'SOLUTIONS_ENGINEER' | 'CLIENT_USER') {
+  async getUsersByRole(role: 'ADMIN' | 'SOLUTIONS_ENGINEER' | 'CLIENT_USER'): Promise<LeanUserDocument[]> {
     await dbConnect();
-    return User.find({ role }).lean();
+    return User.find({ role }).lean() as unknown as LeanUserDocument[];
   },
 
   /**
@@ -105,12 +106,12 @@ export const userService = {
    * @param {string} clientId - Client ID
    * @returns {Promise<Array>} Array of client user documents
    */
-  async getClientUsers(clientId: string) {
+  async getClientUsers(clientId: string): Promise<LeanUserDocument[]> {
     await dbConnect();
     return User.find({
       role: 'CLIENT_USER',
       clientId
-    }).lean();
+    }).lean() as unknown as LeanUserDocument[];
   },
 
   /**
@@ -118,12 +119,12 @@ export const userService = {
    * @param {string} clientId - Client ID
    * @returns {Promise<Array>} Array of solutions engineer documents
    */
-  async getSolutionsEngineersForClient(clientId: string) {
+  async getSolutionsEngineersForClient(clientId: string): Promise<LeanUserDocument[]> {
     await dbConnect();
     return User.find({
       role: 'SOLUTIONS_ENGINEER',
       assignedClientIds: clientId
-    }).lean();
+    }).lean() as unknown as LeanUserDocument[];
   }
 };
 

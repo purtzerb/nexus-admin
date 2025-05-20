@@ -1,5 +1,12 @@
 import React from 'react';
 import PageHeader from '@/components/shared/PageHeader';
+import UsersList from '@/components/admin/users/UsersList';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'User Manager | Nexus Admin',
+  description: 'Manage admin and solutions engineer users in the Nexus platform.'
+};
 
 export default function UsersPage() {
   return (
@@ -7,11 +14,7 @@ export default function UsersPage() {
       <PageHeader pageTitle="User Manager" />
       <div className="p-6 space-y-4">
         <h2 className="text-xl font-semibold">Manage Users</h2>
-
-        {/* Placeholder for user management content */}
-        <div className="bg-cardBackground rounded-lg p-6 shadow-sm">
-          <p className="text-textSecondary">User management interface will be implemented here.</p>
-        </div>
+        <UsersList />
       </div>
     </div>
   );

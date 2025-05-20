@@ -34,3 +34,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+
+
+
+Assumptions:
+- I believe only admin users should be able to create admin users and SE users. So the users page is only visible to admin users
+- Because I need to test normal users, and you also need to be able to test normal users, there are two flows for authentication:
+  - We can set a password within this system, outside of the usebraintrust api
+  - If you add a user without a password, then it will try to authenticate via the usebraintrust API and pass the password entered to this API endpoint. If this succeeds, then we consider that user authenticated.

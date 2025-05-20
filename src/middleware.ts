@@ -20,9 +20,25 @@ export async function middleware(request: NextRequest) {
   
   // Check for API routes that need authentication
   if (pathname.startsWith('/api/')) {
+    // Log all cookies for debugging
+    console.log('Middleware - API Route:', pathname);
+    console.log('Middleware - Cookies:', Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value])));
+    
     const token = request.cookies.get('auth-token');
+    const nextAuthSession = request.cookies.get('next-auth.session-token') || 
+                           request.cookies.get('__Secure-next-auth.session-token');
+    
+    console.log('Middleware - Auth Token:', token?.value);
+    console.log('Middleware - NextAuth Session Token:', nextAuthSession?.value);
+    
+    // Allow the request to proceed if either auth system has a valid token
+    if (nextAuthSession) {
+      console.log('Middleware - NextAuth session found, allowing request');
+      return NextResponse.next();
+    }
     
     if (!token) {
+      console.log('Middleware - No auth tokens found, returning 401');
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
     

@@ -51,4 +51,29 @@ const userSchema = new Schema<IUser>({
 // Create or retrieve the User model
 const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
 
+// Define a type for lean user documents (plain objects returned by .lean())
+export type LeanUserDocument = {
+  _id: mongoose.Types.ObjectId | string;
+  name: string;
+  email: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  phone?: string;
+  role: 'ADMIN' | 'SOLUTIONS_ENGINEER' | 'CLIENT_USER';
+  costRate?: number;
+  billRate?: number;
+  assignedClientIds?: (mongoose.Types.ObjectId | string)[];
+  clientId?: mongoose.Types.ObjectId | string;
+  departmentId?: mongoose.Types.ObjectId | string;
+  notifyByEmailForExceptions?: boolean;
+  notifyBySmsForExceptions?: boolean;
+  hasBillingAccess?: boolean;
+  isClientAdmin?: boolean;
+  clientUserNotes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v?: number;
+  [key: string]: any; // Allow for additional properties
+};
+
 export default User;
