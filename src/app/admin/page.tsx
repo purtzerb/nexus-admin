@@ -14,6 +14,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (!loading && user && !isAdminOrSE) {
       router.push('/client');
+    } else if (!loading && user) {
+      // Redirect to dashboard if at the root admin page
+      router.push('/admin/dashboard');
     }
   }, [loading, user, isAdminOrSE, router]);
 
