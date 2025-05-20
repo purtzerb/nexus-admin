@@ -39,6 +39,7 @@ interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onClientAdded?: () => void;
   client?: any;
   mode?: 'create' | 'update';
 }
@@ -340,7 +341,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Company Information Section */}
         <div>
-          <h4 className="text-md font-medium mb-2">Company Information</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="mb-4">
@@ -372,56 +372,34 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
 
             <div>
               {/* Manage Departments */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Manage Departments
-                </label>
-                <div className="flex items-center">
+              <div className="mb-6">
+                <div className="bg-darkerBackground p-6 rounded">
+                <h4 className="text-md font-medium mb-2">Manage Departments</h4>
                   <input
                     type="text"
                     value={departmentName}
                     onChange={(e) => setDepartmentName(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-buttonBorder rounded-l focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
+                    className="w-full px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary mb-4"
                     placeholder="Department name"
                   />
-                  {departmentName && (
                   <button
                     type="button"
-                    onClick={() => setDepartmentName('')}
-                    className="ml-2 text-error"
+                    onClick={handleAddDepartment}
+                    className="w-full flex items-center justify-center px-4 py-2 border border-buttonBorder bg-white rounded hover:bg-darkerBackground transition-colors duration-200"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
+                    <span className="mr-1">+</span>
+                    Create Department
                   </button>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleAddDepartment}
-                className="w-full flex items-center justify-center px-4 py-2 border border-buttonBorder bg-white rounded hover:bg-darkerBackground transition-colors duration-200"
-              >
-                <span className="text-lg mr-1">+</span>
-                Add Department
-              </button>
 
-              {departments.map((dept, index) => (
-                <div key={index} className="flex items-center justify-between mb-2 last:mb-0">
-                  <span>{dept.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveDepartment(index)}
-                    className="text-error"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+                  {departments.map((dept, index) => (
+                    <div key={index} className="flex items-center justify-between mt-2">
+                      <span>{dept.name}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        </div>
         </div>
 
         {/* Users Section */}
