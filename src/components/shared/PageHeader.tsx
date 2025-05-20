@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { NotificationIcon } from '../shared/NavIcons';
+import { NotificationIcon } from './NavIcons';
 
 interface HeaderProps {
   pageTitle: string;

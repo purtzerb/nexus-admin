@@ -1,10 +1,10 @@
 import React from 'react';
-import Header from '@/components/admin/Header';
+import PageHeader from '@/components/shared/PageHeader';
 
 export default function UsersPage() {
   return (
     <div className="h-full bg-darkerBackground">
-      <Header pageTitle="User Manager" />
+      <PageHeader pageTitle="User Manager" />
       <div className="p-6 space-y-4">
         <h2 className="text-xl font-semibold">Manage Users</h2>
 
