@@ -6,8 +6,9 @@ dbConnect();
 
 // Define Department document interface
 export interface IDepartment extends Document {
-  clientId: mongoose.Types.ObjectId;
+  clientId?: mongoose.Types.ObjectId;
   name: string;
+  createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,12 +17,17 @@ const departmentSchema = new Schema<IDepartment>({
   clientId: {
     type: Schema.Types.ObjectId,
     ref: 'Client',
-    required: true
+    required: false
   },
   name: {
     type: String,
     required: true,
     trim: true
+  },
+  createdBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
   }
 }, { timestamps: true });
 

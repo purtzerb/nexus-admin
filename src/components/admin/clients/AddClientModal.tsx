@@ -92,6 +92,20 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     enabled: isOpen,
   });
 
+  // Fetch departments from the database
+  const { data: dbDepartments } = useQuery({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/departments');
+      if (!response.ok) {
+        throw new Error('Failed to fetch departments');
+      }
+      const data = await response.json();
+      return data.departments;
+    },
+    enabled: isOpen,
+  });
+
   // Reset form when modal is opened/closed
   useEffect(() => {
     if (!isOpen) {
@@ -118,18 +132,37 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     setAssignedSEs([]);
   };
 
-  // Handle adding a department
-  const handleAddDepartment = () => {
+  // Handle adding a department - creates it immediately in the database
+  const handleAddDepartment = async () => {
     if (!departmentName.trim()) return;
 
-    // Check if department already exists
-    if (departments.some(dept => dept.name.toLowerCase() === departmentName.trim().toLowerCase())) {
-      showToast('Department already exists', 'error');
-      return;
-    }
+    try {
+      // Create department in the database
+      const response = await fetch('/api/admin/departments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: departmentName.trim() }),
+      });
 
-    setDepartments([...departments, { name: departmentName.trim() }]);
-    setDepartmentName('');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create department');
+      }
+
+      const data = await response.json();
+
+      // Add the new department to local state so it's available in the Users dropdown
+      setDepartments([...departments, { name: data.department.name }]);
+      showToast(`Department "${departmentName.trim()}" created`, 'success');
+      setDepartmentName('');
+
+      // Refresh departments list
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    } catch (error) {
+      handleApiError(error);
+    }
   };
 
   // Handle removing a department
@@ -215,7 +248,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       const clientData = {
         companyName: companyName.trim(),
         companyUrl: companyUrl.trim() || undefined,
-        departments,
         users,
         assignedSolutionsEngineerIds: assignedSEs,
       };
@@ -252,16 +284,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   // Search functions for SearchableSelect components
   const searchDepartments = async (query: string): Promise<Option[]> => {
     try {
-      // Use local departments if available and query is empty
-      if (!query.trim() && departments.length > 0) {
-        return departments.map(dept => ({
-          value: dept.name,
-          label: dept.name
-        }));
-      }
-
-      // Call the API to search departments
-      const response = await fetch(`/api/admin/departments/search?q=${encodeURIComponent(query)}&limit=5`);
+      // Always fetch from database to ensure we have the latest departments
+      const response = await fetch(`/api/admin/departments?q=${encodeURIComponent(query)}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch departments');
@@ -371,10 +395,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
 
             <div>
-              {/* Manage Departments */}
+              {/* Create Departments */}
               <div className="mb-6">
                 <div className="bg-darkerBackground p-6 rounded">
-                <h4 className="text-md font-medium mb-2">Manage Departments</h4>
+                <h4 className="text-md font-medium mb-2">Create Departments</h4>
+                <p className="text-sm text-textSecondary mb-4">Departments created here will be immediately available for selection in the Users section below.</p>
                   <input
                     type="text"
                     value={departmentName}
@@ -390,12 +415,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                     <span className="mr-1">+</span>
                     Create Department
                   </button>
-
-                  {departments.map((dept, index) => (
-                    <div key={index} className="flex items-center justify-between mt-2">
-                      <span>{dept.name}</span>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -455,10 +474,10 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                   onSearch={searchDepartments}
                   placeholder="Select Department"
                   emptyMessage="No departments found"
-                  initialOptions={departments.map(dept => ({
+                  initialOptions={dbDepartments ? dbDepartments.map((dept: any) => ({
                     value: dept.name,
                     label: dept.name
-                  }))}
+                  })) : []}
                 />
               </div>
               <div className="flex flex-col space-y-1 ml-2 justify-center">
