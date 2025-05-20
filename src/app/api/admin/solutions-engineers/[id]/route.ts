@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { userService } from '@/lib/db/userService';
 import { clientService } from '@/lib/db/clientService';
 import dbConnect from '@/lib/db/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { isAdmin } from '@/lib/auth/permissions';
-import { adaptSession } from '@/lib/auth/sessionAdapter';
+import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 /**
  * GET /api/admin/solutions-engineers/[id]
@@ -18,12 +15,17 @@ export async function GET(
 ) {
   try {
     await dbConnect();
-    const nextAuthSession = await getServerSession(authOptions);
-    const session = adaptSession(nextAuthSession);
     
-    // Check if user is authenticated and has admin permissions
-    if (!isAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Authenticate the request
+    const authUser = await getAuthUser(request);
+    
+    if (!authUser) {
+      return unauthorizedResponse();
+    }
+    
+    // Check if user has admin role
+    if (!hasRequiredRole(authUser, ['ADMIN'])) {
+      return forbiddenResponse('Forbidden: Admin access required');
     }
 
     const { id } = params;
@@ -59,12 +61,17 @@ export async function PUT(
 ) {
   try {
     await dbConnect();
-    const nextAuthSession = await getServerSession(authOptions);
-    const session = adaptSession(nextAuthSession);
     
-    // Check if user is authenticated and has admin permissions
-    if (!isAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Authenticate the request
+    const authUser = await getAuthUser(request);
+    
+    if (!authUser) {
+      return unauthorizedResponse();
+    }
+    
+    // Check if user has admin role
+    if (!hasRequiredRole(authUser, ['ADMIN'])) {
+      return forbiddenResponse('Forbidden: Admin access required');
     }
 
     const { id } = params;
@@ -135,12 +142,17 @@ export async function DELETE(
 ) {
   try {
     await dbConnect();
-    const nextAuthSession = await getServerSession(authOptions);
-    const session = adaptSession(nextAuthSession);
     
-    // Check if user is authenticated and has admin permissions
-    if (!isAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Authenticate the request
+    const authUser = await getAuthUser(request);
+    
+    if (!authUser) {
+      return unauthorizedResponse();
+    }
+    
+    // Check if user has admin role
+    if (!hasRequiredRole(authUser, ['ADMIN'])) {
+      return forbiddenResponse('Forbidden: Admin access required');
     }
 
     const { id } = params;

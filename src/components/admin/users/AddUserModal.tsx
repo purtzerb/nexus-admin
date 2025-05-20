@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Client } from '@/types';
 import toast from 'react-hot-toast';
 import { showToast, handleApiError } from '@/lib/toast/toastUtils';
+import Modal from '@/components/ui/Modal';
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -201,194 +202,186 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-cardBackground rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Add New User</h2>
-          
-          {/* User Type Toggle */}
-          <div className="flex mb-6 border border-buttonBorder rounded overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setUserType('ADMIN')}
-              className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'ADMIN' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserType('SE')}
-              className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'SE' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
-            >
-              Solutions Engineer
-            </button>
+    <Modal isOpen={isOpen} onClose={onClose} title="Add New User" maxWidth="md">
+      {/* User Type Toggle */}
+      <div className="flex mb-6 border border-buttonBorder rounded overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setUserType('ADMIN')}
+          className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'ADMIN' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
+        >
+          Admin
+        </button>
+        <button
+          type="button"
+          onClick={() => setUserType('SE')}
+          className={`flex-1 py-2 px-4 text-sm font-medium ${userType === 'SE' ? 'bg-buttonPrimary text-white' : 'bg-white text-textPrimary'}`}
+        >
+          Solutions Engineer
+        </button>
+      </div>
+      
+      {submitError && (
+        <div className="mb-4 p-3 bg-error bg-opacity-10 border border-error rounded text-error text-sm">
+          {submitError}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-textPrimary mb-1">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className={`w-full p-2 border rounded ${errors.name ? 'border-error' : 'border-buttonBorder'}`}
+              placeholder="Enter full name"
+            />
+            {errors.name && <p className="mt-1 text-sm text-error">{errors.name}</p>}
           </div>
           
-          {submitError && (
-            <div className="mb-4 p-3 bg-error bg-opacity-10 border border-error rounded text-error text-sm">
-              {submitError}
-            </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-textPrimary mb-1">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`w-full p-2 border rounded ${errors.email ? 'border-error' : 'border-buttonBorder'}`}
+              placeholder="Enter email address"
+            />
+            {errors.email && <p className="mt-1 text-sm text-error">{errors.email}</p>}
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-textPrimary mb-1">
+              Password <span className="text-textSecondary">(Optional)</span>
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className={`w-full p-2 border rounded ${errors.password ? 'border-error' : 'border-buttonBorder'}`}
+              placeholder="Enter password"
+            />
+            {errors.password && <p className="mt-1 text-sm text-error">{errors.password}</p>}
+            <p className="mt-1 text-xs text-textSecondary">Password allows authentication outside of the Braintrust ecosystem.</p>
+          </div>
+          
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-textPrimary mb-1">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full p-2 border border-buttonBorder rounded"
+              placeholder="Enter phone number"
+            />
+          </div>
+          
+          {userType === 'SE' && (
+            <>
+              <div>
+                <label htmlFor="costRate" className="block text-sm font-medium text-textPrimary mb-1">
+                  Cost Rate ($/hr) *
+                </label>
+                <input
+                  type="number"
+                  id="costRate"
+                  name="costRate"
+                  value={formData.costRate}
+                  onChange={handleChange}
+                  className={`w-full p-2 border rounded ${errors.costRate ? 'border-error' : 'border-buttonBorder'}`}
+                  placeholder="Enter cost rate"
+                  min="0"
+                  step="0.01"
+                />
+                {errors.costRate && <p className="mt-1 text-sm text-error">{errors.costRate}</p>}
+              </div>
+              
+              <div>
+                <label htmlFor="billRate" className="block text-sm font-medium text-textPrimary mb-1">
+                  Bill Rate ($/hr) *
+                </label>
+                <input
+                  type="number"
+                  id="billRate"
+                  name="billRate"
+                  value={formData.billRate}
+                  onChange={handleChange}
+                  className={`w-full p-2 border rounded ${errors.billRate ? 'border-error' : 'border-buttonBorder'}`}
+                  placeholder="Enter bill rate"
+                  min="0"
+                  step="0.01"
+                />
+                {errors.billRate && <p className="mt-1 text-sm text-error">{errors.billRate}</p>}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-textPrimary mb-2">
+                  Assigned Clients
+                </label>
+                {isLoadingClients ? (
+                  <p className="text-sm text-textSecondary">Loading clients...</p>
+                ) : clients && clients.length > 0 ? (
+                  <div className="max-h-40 overflow-y-auto border border-buttonBorder rounded p-2">
+                    {clients.map((client: Client) => (
+                      <div key={client._id} className="flex items-center mb-2 last:mb-0">
+                        <input
+                          type="checkbox"
+                          id={`client-${client._id}`}
+                          checked={formData.assignedClientIds.includes(client._id)}
+                          onChange={() => handleClientSelection(client._id)}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`client-${client._id}`} className="text-sm text-textPrimary">
+                          {client.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-textSecondary">No clients available</p>
+                )}
+              </div>
+            </>
           )}
           
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-textPrimary mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`w-full p-2 border rounded ${errors.name ? 'border-error' : 'border-buttonBorder'}`}
-                  placeholder="Enter full name"
-                />
-                {errors.name && <p className="mt-1 text-sm text-error">{errors.name}</p>}
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-textPrimary mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full p-2 border rounded ${errors.email ? 'border-error' : 'border-buttonBorder'}`}
-                  placeholder="Enter email address"
-                />
-                {errors.email && <p className="mt-1 text-sm text-error">{errors.email}</p>}
-              </div>
-              
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-textPrimary mb-1">
-                  Password <span className="text-textSecondary">(Optional)</span>
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full p-2 border rounded ${errors.password ? 'border-error' : 'border-buttonBorder'}`}
-                  placeholder="Enter password"
-                />
-                {errors.password && <p className="mt-1 text-sm text-error">{errors.password}</p>}
-                <p className="mt-1 text-xs text-textSecondary">Password allows authentication outside of the Braintrust ecosystem.</p>
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-textPrimary mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-buttonBorder rounded"
-                  placeholder="Enter phone number"
-                />
-              </div>
-              
-              {userType === 'SE' && (
-                <>
-                  <div>
-                    <label htmlFor="costRate" className="block text-sm font-medium text-textPrimary mb-1">
-                      Cost Rate ($/hr) *
-                    </label>
-                    <input
-                      type="number"
-                      id="costRate"
-                      name="costRate"
-                      value={formData.costRate}
-                      onChange={handleChange}
-                      className={`w-full p-2 border rounded ${errors.costRate ? 'border-error' : 'border-buttonBorder'}`}
-                      placeholder="Enter cost rate"
-                      min="0"
-                      step="0.01"
-                    />
-                    {errors.costRate && <p className="mt-1 text-sm text-error">{errors.costRate}</p>}
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="billRate" className="block text-sm font-medium text-textPrimary mb-1">
-                      Bill Rate ($/hr) *
-                    </label>
-                    <input
-                      type="number"
-                      id="billRate"
-                      name="billRate"
-                      value={formData.billRate}
-                      onChange={handleChange}
-                      className={`w-full p-2 border rounded ${errors.billRate ? 'border-error' : 'border-buttonBorder'}`}
-                      placeholder="Enter bill rate"
-                      min="0"
-                      step="0.01"
-                    />
-                    {errors.billRate && <p className="mt-1 text-sm text-error">{errors.billRate}</p>}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-textPrimary mb-2">
-                      Assigned Clients
-                    </label>
-                    {isLoadingClients ? (
-                      <p className="text-sm text-textSecondary">Loading clients...</p>
-                    ) : clients && clients.length > 0 ? (
-                      <div className="max-h-40 overflow-y-auto border border-buttonBorder rounded p-2">
-                        {clients.map((client: Client) => (
-                          <div key={client._id} className="flex items-center mb-2 last:mb-0">
-                            <input
-                              type="checkbox"
-                              id={`client-${client._id}`}
-                              checked={formData.assignedClientIds.includes(client._id)}
-                              onChange={() => handleClientSelection(client._id)}
-                              className="mr-2"
-                            />
-                            <label htmlFor={`client-${client._id}`} className="text-sm text-textPrimary">
-                              {client.name}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-textSecondary">No clients available</p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-buttonBorder rounded text-textPrimary"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-buttonPrimary text-textLight rounded"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Creating...' : 'Create User'}
-              </button>
-            </div>
-          </form>
+          <div className="mt-6 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-buttonBorder rounded text-textPrimary"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-buttonPrimary text-textLight rounded"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Create User'}
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };
 

@@ -13,9 +13,11 @@
     "db:setup": "npm run db:up && npm run db:seed"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.4",
     "@tanstack/react-query": "^5.76.1",
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.5.0",
+    "framer-motion": "^12.12.1",
     "jose": "^6.0.11",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.0",

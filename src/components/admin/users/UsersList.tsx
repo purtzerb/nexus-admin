@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-// Import the AddUserModal component directly with a relative path
 import AddUserModal from '@/components/admin/users/AddUserModal';
+import DeleteUserModal from '@/components/admin/users/DeleteUserModal';
 
 interface User {
   _id: string;
@@ -38,6 +38,8 @@ const fetchSolutionsEngineers = async (): Promise<User[]> => {
 const UsersList: React.FC = () => {
   const { user, isAdmin } = useAuth();
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'ADMIN' | 'SE'>('ADMIN');
 
   const { data: adminUsers, isLoading: isLoadingAdmins, isError: isErrorAdmins, refetch: refetchAdmins } = useQuery({
@@ -60,6 +62,21 @@ const UsersList: React.FC = () => {
     }
     setIsAddUserModalOpen(false);
   };
+  
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteUserModalOpen(true);
+  };
+  
+  const handleDeleteUserSuccess = () => {
+    if (activeTab === 'ADMIN') {
+      refetchAdmins();
+    } else {
+      refetchSEs();
+    }
+    setIsDeleteUserModalOpen(false);
+    setUserToDelete(null);
+  };
 
   // Get the appropriate users based on active tab
   const users = activeTab === 'ADMIN' ? adminUsers : seUsers;
@@ -79,28 +96,28 @@ const UsersList: React.FC = () => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <div className="flex space-x-2">
-          <button
-            onClick={() => setActiveTab('ADMIN')}
-            className={`px-4 py-2 rounded-full text-sm font-medium ${
-              activeTab === 'ADMIN'
-                ? 'bg-buttonPrimary text-textLight'
-                : 'bg-darkerBackground text-textPrimary'
-            }`}
-          >
-            Admin Users
-          </button>
-          <button
-            onClick={() => setActiveTab('SE')}
-            className={`px-4 py-2 rounded-full text-sm font-medium ${
-              activeTab === 'SE'
-                ? 'bg-buttonPrimary text-textLight'
-                : 'bg-darkerBackground text-textPrimary'
-            }`}
-          >
-            SE Users
-          </button>
-        </div>
-        
+        <button
+          onClick={() => setActiveTab('ADMIN')}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            activeTab === 'ADMIN'
+              ? 'bg-buttonPrimary text-textLight transform scale-105'
+              : 'bg-white text-textPrimary border border-buttonBorder hover:bg-darkerBackground'
+          }`}
+        >
+          Admin Users
+        </button>
+        <button
+          onClick={() => setActiveTab('SE')}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            activeTab === 'SE'
+              ? 'bg-buttonPrimary text-textLight transform scale-105'
+              : 'bg-white text-textPrimary border border-buttonBorder hover:bg-darkerBackground'
+          }`}
+        >
+          SE Users
+        </button>
+      </div>
+
         {/* Only show Add New User button for admins */}
         {isAdmin && (
           <button
@@ -117,35 +134,36 @@ const UsersList: React.FC = () => {
 
       <div className="bg-cardBackground rounded-lg shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-darkerBackground">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Name
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Email
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Phone
-              </th>
-              {activeTab === 'SE' && (
-                <>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Cost Rate
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Bill Rate
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Assigned Clients
-                  </th>
-                </>
-              )}
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
+        <thead>
+          <tr className="bg-white border border-buttonBorder rounded-t-lg overflow-hidden">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+              Name
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+              Email
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+              Phone
+            </th>
+            {/* Additional columns for SE users */}
+            {activeTab === 'SE' && (
+              <>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+                  Cost Rate
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+                  Bill Rate
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+                  Assigned Clients
+                </th>
+              </>
+            )}
+            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-textSecondary uppercase tracking-wider border-b border-buttonBorder">
+              Actions
+            </th>
+          </tr>
+        </thead>
           <tbody className="bg-cardBackground divide-y divide-gray-200">
             {users && users.length > 0 ? (
               users.map((user: User) => (
@@ -195,7 +213,11 @@ const UsersList: React.FC = () => {
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                       </svg>
                     </button>
-                    <button className="text-error hover:text-opacity-75">
+                    <button 
+                      onClick={() => handleDeleteUser(user)}
+                      className="text-error hover:text-opacity-75 transition-opacity duration-200"
+                      aria-label="Delete user"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
@@ -214,13 +236,21 @@ const UsersList: React.FC = () => {
         </table>
       </div>
 
-      {isAddUserModalOpen && (
-        <AddUserModal
-          isOpen={isAddUserModalOpen}
-          onClose={() => setIsAddUserModalOpen(false)}
-          onSuccess={handleAddUserSuccess}
-        />
-      )}
+      <AddUserModal
+        isOpen={isAddUserModalOpen}
+        onClose={() => setIsAddUserModalOpen(false)}
+        onSuccess={handleAddUserSuccess}
+      />
+      
+      <DeleteUserModal
+        isOpen={isDeleteUserModalOpen}
+        onClose={() => {
+          setIsDeleteUserModalOpen(false);
+          setUserToDelete(null);
+        }}
+        onSuccess={handleDeleteUserSuccess}
+        user={userToDelete}
+      />
     </div>
   );
 };
