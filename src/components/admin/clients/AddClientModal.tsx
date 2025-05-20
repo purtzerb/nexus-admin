@@ -3,10 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { Dialog, Transition } from '@headlessui/react';
+import CheckboxInput from '@/components/shared/inputs/CheckboxInput';
+import SearchableSelect, { Option } from '@/components/shared/inputs/SearchableSelect';
 import toast from 'react-hot-toast';
 import { showToast, handleApiError } from '@/lib/toast/toastUtils';
 import Modal from '@/components/ui/Modal';
-import { TextInput, SelectInput, CheckboxInput } from '@/components/shared/inputs';
+import { TextInput } from '@/components/shared/inputs';
 
 // Define interfaces for client data
 interface ClientDepartment {
@@ -394,16 +397,58 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 />
               </div>
               <div>
-                <select
+                <SearchableSelect
                   value={userDepartment}
-                  onChange={(e) => setUserDepartment(e.target.value)}
-                  className="w-full px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
-                >
-                  <option value="">Select</option>
-                  {departments.map((dept, index) => (
-                    <option key={index} value={dept.name}>{dept.name}</option>
-                  ))}
-                </select>
+                  onChange={setUserDepartment}
+                  onSearch={async (query) => {
+                    if (!query.trim()) {
+                      return departments.map(dept => ({ value: dept.name, label: dept.name }));
+                    }
+                    
+                    const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+                    
+                    // Calculate score for each department based on match quality
+                    return departments
+                      .map(dept => {
+                        const deptNameLower = dept.name.toLowerCase();
+                        let score = 0;
+                        
+                        // Check for exact match (highest priority)
+                        if (deptNameLower === query.toLowerCase()) {
+                          score += 100;
+                        }
+                        
+                        // Check for starts with match (high priority)
+                        if (deptNameLower.startsWith(query.toLowerCase())) {
+                          score += 50;
+                        }
+                        
+                        // Check for individual term matches
+                        searchTerms.forEach(term => {
+                          // Full word match
+                          if (deptNameLower.includes(` ${term} `) || 
+                              deptNameLower.startsWith(`${term} `) || 
+                              deptNameLower.endsWith(` ${term}`)) {
+                            score += 30;
+                          }
+                          // Partial match
+                          else if (deptNameLower.includes(term)) {
+                            score += 10;
+                          }
+                        });
+                        
+                        return { 
+                          value: dept.name, 
+                          label: dept.name,
+                          score: score
+                        };
+                      })
+                      .filter(item => item.score > 0)
+                      .sort((a, b) => b.score - a.score);
+                  }}
+                  placeholder="Select Department"
+                  emptyMessage="No departments found"
+                />
               </div>
               <div className="flex flex-col space-y-1 ml-2 justify-center">
                 <CheckboxInput
@@ -499,16 +544,73 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           {/* SE Input Row */}
           <div className="grid grid-cols-3 gap-2 p-2 items-center">
             <div>
-              <select
+              <SearchableSelect
                 value={selectedSE}
-                onChange={(e) => setSelectedSE(e.target.value)}
-                className="w-full mr-2 px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
-              >
-                <option value="">Select SE</option>
-                {solutionsEngineers?.map((se) => (
-                  <option key={se._id} value={se._id}>{se.name}</option>
-                ))}
-              </select>
+                onChange={setSelectedSE}
+                onSearch={async (query) => {
+                  if (!query.trim()) {
+                    return solutionsEngineers?.map(se => ({ 
+                      value: se._id, 
+                      label: `${se.name} (${se.email})` 
+                    })) || [];
+                  }
+                  
+                  const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+                  
+                  // Calculate score for each SE based on match quality
+                  return solutionsEngineers
+                    ?.map(se => {
+                      const nameLower = se.name.toLowerCase();
+                      const emailLower = se.email.toLowerCase();
+                      const fullTextLower = `${nameLower} ${emailLower}`.toLowerCase();
+                      let score = 0;
+                      
+                      // Check for exact matches (highest priority)
+                      if (nameLower === query.toLowerCase()) {
+                        score += 100;
+                      }
+                      if (emailLower === query.toLowerCase()) {
+                        score += 90;
+                      }
+                      
+                      // Check for starts with matches (high priority)
+                      if (nameLower.startsWith(query.toLowerCase())) {
+                        score += 50;
+                      }
+                      if (emailLower.startsWith(query.toLowerCase())) {
+                        score += 40;
+                      }
+                      
+                      // Check for individual term matches
+                      searchTerms.forEach(term => {
+                        // Name matches (higher priority)
+                        if (nameLower.includes(` ${term} `) || 
+                            nameLower.startsWith(`${term} `) || 
+                            nameLower.endsWith(` ${term}`)) {
+                          score += 30;
+                        }
+                        else if (nameLower.includes(term)) {
+                          score += 20;
+                        }
+                        
+                        // Email matches
+                        if (emailLower.includes(term)) {
+                          score += 15;
+                        }
+                      });
+                      
+                      return { 
+                        value: se._id, 
+                        label: `${se.name} (${se.email})`,
+                        score: score
+                      };
+                    })
+                    .filter(item => item.score > 0)
+                    .sort((a, b) => b.score - a.score) || [];
+                }}
+                placeholder="Search by name or email"
+                emptyMessage="No solutions engineers found"
+              />
             </div>
             <div>
               {selectedSE && solutionsEngineers?.find(se => se._id === selectedSE)?.email || 'email@example.com'}
