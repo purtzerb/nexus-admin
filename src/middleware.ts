@@ -6,6 +6,9 @@ import { jwtVerify } from 'jose';
 const publicPaths = [
   '/login',
   '/api/auth/login',
+  '/api/external', // Allow external API routes to handle their own authentication
+  '/api/swagger', // Allow Swagger documentation to be accessed
+  '/api-docs',    // Allow Swagger UI to be accessed
   '/_next',
   '/favicon.ico',
 ];
@@ -19,7 +22,8 @@ export async function middleware(request: NextRequest) {
   }
   
   // Check for API routes that need authentication
-  if (pathname.startsWith('/api/')) {
+  // Skip external API routes as they have their own authentication mechanism
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/external') && !pathname.startsWith('/api/swagger')) {
     // Log all cookies for debugging
     console.log('Middleware - API Route:', pathname);
     console.log('Middleware - Cookies:', Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value])));

@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Ensure params.id is properly awaited
-    const clientId = params?.id ? await Promise.resolve(params.id) : null;
+    const {id: clientId} = await params;
 
     if (!clientId) {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });

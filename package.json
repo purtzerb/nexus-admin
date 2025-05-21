@@ -23,10 +23,13 @@
     "mongoose": "^8.15.0",
     "next": "15.3.2",
     "next-auth": "^4.24.11",
+    "next-swagger-doc": "^0.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
-    "react-spinners": "^0.17.0"
+    "react-spinners": "^0.17.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-react": "^5.22.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

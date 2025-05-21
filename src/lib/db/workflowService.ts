@@ -1,6 +1,29 @@
 import Workflow, { IWorkflow } from '@/models/Workflow';
+import WorkflowNode from '@/models/WorkflowNode';
+import WorkflowExecution from '@/models/WorkflowExecution';
+import WorkflowException from '@/models/WorkflowException';
+// Import Department model to ensure it's registered before using in populate
+import '@/models/Department';
 import dbConnect from './db';
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
+
+// Define a type for the populated workflow document from MongoDB
+interface PopulatedWorkflow extends Document {
+  _id: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  departmentId?: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+  };
+  name: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  timeSavedPerExecution?: number;
+  totalTimeSaved?: number;
+  moneySavedPerExecution?: number;
+  totalMoneySaved?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Define types for function parameters
 type FilterQuery = Record<string, any>;
@@ -47,32 +70,65 @@ export const workflowService = {
   /**
    * Get workflows by client ID
    * @param {string} clientId - Client ID
-   * @returns {Promise<Array>} Array of workflow documents with populated department info
+   * @returns {Promise<Array>} Array of workflow documents with populated department info and counts
    */
   async getWorkflowsByClientId(clientId: string) {
     await dbConnect();
     
     // Find all workflows for this client and populate the department reference
-    return Workflow.find({ clientId })
+    const workflows = await Workflow.find({ clientId })
       .populate({
         path: 'departmentId',
         select: 'name', // Only select the name field from the department
         model: 'Department'
       })
-      .lean()
-      .then(workflows => {
-        // Transform the populated departmentId into a department property for the UI
-        return workflows.map(workflow => {
-          const result: any = { ...workflow };
-          
-          // If departmentId is populated, extract the name as department
-          if (workflow.departmentId && typeof workflow.departmentId === 'object' && 'name' in workflow.departmentId) {
-            result.department = workflow.departmentId.name;
-          }
-          
-          return result;
-        });
-      });
+      .lean();
+    
+    // Get the workflow IDs to use in subsequent queries
+    const workflowIds = workflows.map(w => w._id as mongoose.Types.ObjectId);
+    
+    // Get counts for each workflow
+    const [nodesCounts, executionsCounts, exceptionsCounts] = await Promise.all([
+      // Count nodes for each workflow
+      WorkflowNode.aggregate([
+        { $match: { workflowId: { $in: workflowIds } } },
+        { $group: { _id: '$workflowId', count: { $sum: 1 } } }
+      ]),
+      // Count executions for each workflow
+      WorkflowExecution.aggregate([
+        { $match: { workflowId: { $in: workflowIds } } },
+        { $group: { _id: '$workflowId', count: { $sum: 1 } } }
+      ]),
+      // Count exceptions for each workflow
+      WorkflowException.aggregate([
+        { $match: { workflowId: { $in: workflowIds } } },
+        { $group: { _id: '$workflowId', count: { $sum: 1 } } }
+      ])
+    ]);
+    
+    // Create lookup maps for quick access
+    const nodesMap = new Map(nodesCounts.map(item => [item._id.toString(), item.count]));
+    const executionsMap = new Map(executionsCounts.map(item => [item._id.toString(), item.count]));
+    const exceptionsMap = new Map(exceptionsCounts.map(item => [item._id.toString(), item.count]));
+    
+    // Transform the workflows with counts and department info
+    return workflows.map(workflow => {
+      const workflowId = (workflow._id as mongoose.Types.ObjectId).toString();
+      const result: any = { ...workflow };
+      
+      // Add counts from the aggregations
+      result.numberOfNodes = nodesMap.get(workflowId) || 0;
+      result.numberOfExecutions = executionsMap.get(workflowId) || 0;
+      result.numberOfExceptions = exceptionsMap.get(workflowId) || 0;
+      
+      // If departmentId is populated, extract the name as department
+      if (workflow.departmentId && typeof workflow.departmentId === 'object' && 
+          'name' in (workflow.departmentId as any)) {
+        result.department = (workflow.departmentId as any).name;
+      }
+      
+      return result;
+    });
   },
 
   /**
@@ -118,35 +174,48 @@ export const workflowService = {
    */
   async deleteWorkflow(workflowId: string) {
     await dbConnect();
-    return Workflow.findByIdAndDelete(workflowId).lean();
+    return Workflow.findByIdAndDelete(workflowId).lean() as Promise<PopulatedWorkflow | null>;
   },
 
   /**
-   * Increment execution count for a workflow
+   * Get a workflow by ID with counts
    * @param {string} workflowId - Workflow ID
-   * @returns {Promise<Object>} Updated workflow document
+   * @returns {Promise<Object>} Workflow document with counts
    */
-  async incrementExecutionCount(workflowId: string) {
+  async getWorkflowWithCounts(workflowId: string) {
     await dbConnect();
-    return Workflow.findByIdAndUpdate(
-      workflowId,
-      { $inc: { numberOfExecutions: 1 } },
-      { new: true }
-    ).lean();
-  },
-
-  /**
-   * Increment exception count for a workflow
-   * @param {string} workflowId - Workflow ID
-   * @returns {Promise<Object>} Updated workflow document
-   */
-  async incrementExceptionCount(workflowId: string) {
-    await dbConnect();
-    return Workflow.findByIdAndUpdate(
-      workflowId,
-      { $inc: { numberOfExceptions: 1 } },
-      { new: true }
-    ).lean();
+    
+    const workflow = await Workflow.findById(workflowId)
+      .populate({
+        path: 'departmentId',
+        select: 'name',
+        model: 'Department'
+      })
+      .lean() as PopulatedWorkflow | null;
+      
+    if (!workflow) return null;
+    
+    // Get counts for this workflow
+    const [nodesCount, executionsCount, exceptionsCount] = await Promise.all([
+      WorkflowNode.countDocuments({ workflowId }),
+      WorkflowExecution.countDocuments({ workflowId }),
+      WorkflowException.countDocuments({ workflowId })
+    ]);
+    
+    const result: any = { ...workflow };
+    
+    // Add counts
+    result.numberOfNodes = nodesCount;
+    result.numberOfExecutions = executionsCount;
+    result.numberOfExceptions = exceptionsCount;
+    
+    // If departmentId is populated, extract the name as department
+    if (workflow.departmentId && typeof workflow.departmentId === 'object' && 
+        'name' in (workflow.departmentId as any)) {
+      result.department = (workflow.departmentId as any).name;
+    }
+    
+    return result;
   },
 
   /**
