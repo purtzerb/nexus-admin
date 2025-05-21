@@ -140,7 +140,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       clientId: id,
       amount: Number(data.amount),
       reason: data.reason,
-      appliedBy: user.email,
+      appliedBy: user.email || user.id || 'admin-user', // Fallback to user ID or a default value if email is missing
       appliedAt: new Date(),
       transactionType: 'CREDIT',
       balance: client.creditBalance,
