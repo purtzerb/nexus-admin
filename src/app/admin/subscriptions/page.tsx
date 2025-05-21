@@ -1,10 +1,14 @@
 import React from 'react';
+import SubscriptionsList from '@/components/admin/subscriptions/SubscriptionsList';
+import PageHeader from '@/components/shared/PageHeader';
 
 export default function SubscriptionsPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Subscriptions</h1>
-      <p>Manage client subscriptions here</p>
+      <PageHeader pageTitle="Plan Manager" />
+      <div className="mt-6">
+        <SubscriptionsList />
+      </div>
     </div>
   );
 }
