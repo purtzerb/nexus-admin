@@ -11,8 +11,6 @@ export interface IInvoice extends Document {
   invoiceDate: Date;
   dueDate: Date;
   paymentMethodInfo?: string;
-  contractStartDateForInvoice?: Date;
-  contractEndDateForInvoice?: Date;
   amountBilled: number;
   status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'VOID';
   notes?: string;
@@ -43,14 +41,6 @@ const invoiceSchema = new Schema<IInvoice>({
   paymentMethodInfo: { // e.g., "Stripe Charge ID: xyz", "Check #123", "Submitted to ERP"
     type: String,
     trim: true,
-    required: false
-  },
-  contractStartDateForInvoice: { // Denormalized from ClientSubscription for this invoice period
-    type: Date,
-    required: false
-  },
-  contractEndDateForInvoice: { // Denormalized
-    type: Date,
     required: false
   },
   amountBilled: {

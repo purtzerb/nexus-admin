@@ -6,97 +6,106 @@ import { showToast, handleApiError } from '@/lib/toast/toastUtils';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
-interface Client {
+interface Invoice {
   _id: string;
-  companyName: string;
+  clientId: string;
+  clientSubscriptionId: string;
+  invoiceDate: string;
+  dueDate: string;
+  paymentMethodInfo?: string;
+  amountBilled: number;
+  status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'VOID';
+  notes?: string;
+  clientName?: string;
 }
 
-interface DeleteClientModalProps {
+interface DeleteInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  client: Client | null;
+  invoice: Invoice | null;
 }
 
-const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
+const DeleteInvoiceModal: React.FC<DeleteInvoiceModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  client
+  invoice
 }) => {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const queryClient = useQueryClient();
-  
-  if (!client) return null;
+
+  if (!invoice) return null;
 
   const handleDelete = async () => {
-    if (!client) return;
-    
+    if (!invoice) return;
+
     setIsDeleting(true);
-    
+
     // Show loading toast
     const loadingToastId = showToast(
-      'Deleting client...',
+      'Deleting invoice...',
       'loading'
     );
-    
+
     try {
-      const response = await fetch(`/api/admin/clients/${client._id}`, {
+      const response = await fetch(`/api/admin/invoices/${invoice._id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete client');
+        throw new Error(errorData.error || 'Failed to delete invoice');
       }
-      
+
       // Dismiss loading toast and show success toast
       toast.dismiss(loadingToastId);
-      showToast('Client deleted successfully', 'success');
-      
-      // Update React Query cache to remove the deleted client
-      queryClient.setQueryData(['clients'], (oldData: any) => {
+      showToast('Invoice deleted successfully', 'success');
+
+      // Update React Query cache to remove the deleted invoice
+      queryClient.setQueryData(['invoices'], (oldData: any) => {
         if (!oldData) return oldData;
-        
-        // If oldData is an array (direct clients array)
+
+        // If oldData is an array (direct invoices array)
         if (Array.isArray(oldData)) {
-          return oldData.filter((c: any) => c._id !== client._id);
+          return oldData.filter((inv: any) => inv._id !== invoice._id);
         }
-        
-        // If oldData is an object with a clients property (wrapped in an object)
-        if (oldData && typeof oldData === 'object' && Array.isArray(oldData.clients)) {
+
+        // If oldData is an object with an invoices property
+        if (oldData && typeof oldData === 'object' && Array.isArray(oldData.invoices)) {
           return {
             ...oldData,
-            clients: oldData.clients.filter((c: any) => c._id !== client._id)
+            invoices: oldData.invoices.filter((inv: any) => inv._id !== invoice._id)
           };
         }
-        
+
         return oldData;
       });
-      
-      // Also invalidate the queries to ensure data consistency
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      
+
+      // Also invalidate the query to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+
       // Success - call the onSuccess callback
       onSuccess();
     } catch (error) {
       // Dismiss loading toast and show error toast
       toast.dismiss(loadingToastId);
-      handleApiError(error, 'Failed to delete client');
-      
-      console.error('Error deleting client:', error);
+      handleApiError(error, 'Failed to delete invoice');
+
+      console.error('Error deleting invoice:', error);
     } finally {
       setIsDeleting(false);
       onClose();
     }
   };
 
+  if (!isOpen || !invoice) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Delete Client" maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title="Delete Invoice" maxWidth="sm">
       <div className="space-y-4">
         <div className="bg-error bg-opacity-10 border border-error rounded-lg p-4 text-error">
           <div className="flex items-start">
@@ -106,24 +115,15 @@ const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
             <div>
               <h4 className="font-medium">Warning: This action cannot be undone</h4>
               <p className="text-sm mt-1">
-                This will permanently delete the client and all associated data.
+                This will mark the invoice as VOID in the system
               </p>
             </div>
           </div>
         </div>
 
         <p className="text-textPrimary">
-          Are you sure you want to delete <span className="font-semibold">{client.companyName}</span>?
+          Are you sure you want to delete the invoice for <span className="font-semibold">{invoice.clientName}</span>?
         </p>
-        
-        <div className="bg-darkerBackground p-3 rounded-md">
-          <h4 className="font-medium text-sm mb-2">This will:</h4>
-          <ul className="list-disc pl-5 text-sm text-textSecondary space-y-1">
-            <li>Delete all client users associated with this client</li>
-            <li>Remove this client from all solution engineers' assignments</li>
-            <li>Delete all client data permanently</li>
-          </ul>
-        </div>
 
         <div className="flex justify-end space-x-3 mt-6">
           <button
@@ -140,7 +140,7 @@ const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
             className="px-4 py-2 bg-error text-white rounded"
             disabled={isDeleting}
           >
-            {isDeleting ? 'Deleting...' : 'Delete Client'}
+            {isDeleting ? 'Deleting...' : 'Delete Invoice'}
           </button>
         </div>
       </div>
@@ -148,4 +148,4 @@ const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
   );
 };
 
-export default DeleteClientModal;
+export default DeleteInvoiceModal;

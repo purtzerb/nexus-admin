@@ -17,6 +17,7 @@ interface SelectInputProps {
   required?: boolean;
   error?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 const SelectInput: React.FC<SelectInputProps> = ({
@@ -29,6 +30,7 @@ const SelectInput: React.FC<SelectInputProps> = ({
   required = false,
   error,
   className = '',
+  disabled = false,
 }) => {
   return (
     <div className={className}>
@@ -40,10 +42,12 @@ const SelectInput: React.FC<SelectInputProps> = ({
       <div className="relative">
         <select
           id={id}
+          name={id}
           value={value}
           onChange={onChange}
-          className={`w-full px-3 py-2 pr-10 border ${error ? 'border-error' : 'border-buttonBorder'} rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary appearance-none`}
+          className={`w-full px-3 py-2 pr-10 border ${error ? 'border-error' : 'border-buttonBorder'} rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary appearance-none ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           required={required}
+          disabled={disabled}
         >
         <option value="">{placeholder}</option>
         {options.map((option) => (

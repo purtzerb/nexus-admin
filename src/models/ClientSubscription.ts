@@ -10,9 +10,6 @@ export interface IClientSubscription extends Document {
   subscriptionPlanId: mongoose.Types.ObjectId;
   startDate: Date;
   endDate?: Date;
-  baseFeeOverride?: number;
-  creditsRemainingThisPeriod?: number;
-  renewsOn?: Date;
   status: 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'PENDING_RENEWAL';
   createdAt: Date;
   updatedAt: Date;
@@ -35,19 +32,6 @@ const clientSubscriptionSchema = new Schema<IClientSubscription>({
     required: true
   },
   endDate: { // Optional, for fixed-term subscriptions
-    type: Date,
-    required: false
-  },
-  baseFeeOverride: { // If this client has a custom price for the plan
-    type: Number,
-    required: false
-  },
-  // Specific to this client's instance of the plan, if consumption based
-  creditsRemainingThisPeriod: {
-    type: Number,
-    required: false
-  },
-  renewsOn: { // Next renewal date
     type: Date,
     required: false
   },

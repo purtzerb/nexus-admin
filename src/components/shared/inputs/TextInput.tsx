@@ -10,7 +10,7 @@ interface TextInputProps {
   placeholder?: string;
   required?: boolean;
   error?: string;
-  type?: 'text' | 'email' | 'password' | 'url' | 'tel' | 'number';
+  type?: 'text' | 'email' | 'password' | 'url' | 'tel' | 'number' | 'date';
   className?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
