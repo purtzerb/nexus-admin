@@ -47,7 +47,7 @@ export async function GET(
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const { id } = params;
+    const {id} = await params;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -109,7 +109,7 @@ export async function PUT(
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const { id } = params;
+    const {id} = await params;
     const data = await req.json();
 
     // Validate ObjectId
@@ -157,8 +157,8 @@ export async function PUT(
 
     // Use the Mongoose model to update the subscription
     const updated = await SubscriptionPlan.findByIdAndUpdate(
-      id, 
-      updatedSubscription, 
+      id,
+      updatedSubscription,
       { new: true }
     );
 
@@ -197,7 +197,7 @@ export async function DELETE(
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const { id } = params;
+    const {id} = await params;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {

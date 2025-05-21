@@ -50,6 +50,8 @@ export interface IClient extends Document {
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   industry?: string;
   contactName?: string;
+  creditBalance?: number;
+  lastCreditUpdate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -148,6 +150,14 @@ const clientSchema = new Schema<IClient>({
   contactName: {
     type: String,
     trim: true
+  },
+  creditBalance: {
+    type: Number,
+    default: 0
+  },
+  lastCreditUpdate: {
+    type: Date,
+    default: Date.now
   }
 }, { timestamps: true });
 

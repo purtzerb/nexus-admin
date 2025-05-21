@@ -25,7 +25,7 @@ export async function PUT(
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const id = params.id;
+    const {id} = await params;
     const data = await req.json();
 
     // Verify client subscription exists
@@ -89,7 +89,7 @@ export async function DELETE(
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const id = params.id;
+    const {id} = await params;
 
     // Verify client subscription exists
     const subscription = await ClientSubscription.findById(id);

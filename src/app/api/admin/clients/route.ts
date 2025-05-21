@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
-    const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : undefined;
+    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
+    const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : (page - 1) * (limit || 10);
+    const search = searchParams.get('search');
+    const includeCredits = searchParams.get('includeCredits') === 'true';
 
     let filter = {};
 
@@ -39,14 +42,34 @@ export async function GET(request: NextRequest) {
     if (user.role === 'SOLUTIONS_ENGINEER' && user.id) {
       filter = { assignedSolutionsEngineerIds: user.id };
     }
+    
+    // Add search filter if search parameter is provided
+    if (search && search.trim()) {
+      // Use case-insensitive regex search on company name
+      filter = {
+        ...filter,
+        companyName: { $regex: search.trim(), $options: 'i' }
+      };
+    }
 
+    // Count total clients for pagination
+    const totalCount = await clientService.countClients(filter);
+    
     // Get clients
     const clients = await clientService.getClients(
       filter,
       { limit, skip, sort: { companyName: 1 as 1 } }
     );
-
-    return NextResponse.json({ clients });
+    
+    // Calculate total pages
+    const totalPages = limit ? Math.ceil(totalCount / limit) : 1;
+    
+    return NextResponse.json({
+      clients,
+      totalCount,
+      page: page || 1,
+      totalPages
+    });
   } catch (error) {
     console.error('Error fetching clients:', error);
     return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
@@ -189,7 +212,7 @@ export async function POST(request: NextRequest) {
               hasBillingAccess: userData.access?.billing || false,
               isClientAdmin: userData.access?.admin || false
             };
-            
+
             // Handle password if provided
             if (userData.password) {
               console.log(`Generating password hash for user ${userData.name}`);

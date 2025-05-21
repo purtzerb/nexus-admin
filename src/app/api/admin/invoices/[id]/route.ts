@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const { id } = params;
+    const {id} = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -72,7 +72,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const { id } = params;
+    const {id} = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -104,9 +104,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     await invoice.save();
 
-    return NextResponse.json({ 
-      message: 'Invoice updated successfully', 
-      invoice 
+    return NextResponse.json({
+      message: 'Invoice updated successfully',
+      invoice
     });
   } catch (error) {
     console.error('Error updating invoice:', error);
@@ -134,7 +134,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return forbiddenResponse('Forbidden: Admin access required');
     }
 
-    const { id } = params;
+    const {id} = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -156,8 +156,8 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     invoice.status = 'VOID';
     await invoice.save();
 
-    return NextResponse.json({ 
-      message: 'Invoice voided successfully' 
+    return NextResponse.json({
+      message: 'Invoice voided successfully'
     });
   } catch (error) {
     console.error('Error voiding invoice:', error);

@@ -22,6 +22,15 @@ interface UpdateOptions {
  */
 export const clientService = {
   /**
+   * Count clients with optional filtering
+   * @param {Object} filter - MongoDB filter object
+   * @returns {Promise<number>} Count of clients matching the filter
+   */
+  async countClients(filter: FilterQuery = {}) {
+    await dbConnect();
+    return Client.countDocuments(filter);
+  },
+  /**
    * Get all clients with optional filtering
    * @param {Object} filter - MongoDB filter object
    * @param {Object} options - Query options (sort, limit, skip)
@@ -49,7 +58,7 @@ export const clientService = {
     await dbConnect();
     return Client.findById(clientId).lean();
   },
-  
+
   /**
    * Get a single client by company name
    * @param {string} companyName - Company name
@@ -168,7 +177,7 @@ export const clientService = {
         'pipelineSteps.$[step].status': status
       }
     };
-    
+
     // If step is completed, set the completion date
     if (status === 'completed') {
       updateData.$set['pipelineSteps.$[step].completedDate'] = new Date();
@@ -176,12 +185,12 @@ export const clientService = {
       // If step is not completed, remove the completion date
       updateData.$set['pipelineSteps.$[step].completedDate'] = null;
     }
-    
+
     return Client.findByIdAndUpdate(
       clientId,
       updateData,
-      { 
-        new: true, 
+      {
+        new: true,
         runValidators: true,
         arrayFilters: [{ 'step.name': stepName }]
       }

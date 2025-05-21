@@ -26,12 +26,14 @@ interface ClientPlanListProps {
   clientSubscriptions: ClientSubscription[];
   onAssignPlan: (client: Client) => void;
   onRefresh: () => void;
+  isLoading: boolean;
 }
 
-const ClientPlanList: React.FC<ClientPlanListProps> = ({ 
-  clientSubscriptions, 
+const ClientPlanList: React.FC<ClientPlanListProps> = ({
+  clientSubscriptions,
   onAssignPlan,
-  onRefresh
+  onRefresh,
+  isLoading
 }) => {
   const { isAdmin } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -46,7 +48,7 @@ const ClientPlanList: React.FC<ClientPlanListProps> = ({
       _id: subscription.clientId,
       companyName: subscription.clientName || ''
     };
-    
+
     setSelectedClient(client);
     setSelectedSubscription(subscription);
     setIsEditModalOpen(true);
@@ -57,27 +59,27 @@ const ClientPlanList: React.FC<ClientPlanListProps> = ({
     setIsEditModalOpen(false);
     setSelectedSubscription(null);
   };
-  
+
   const handleDeleteSubscription = (subscription: ClientSubscription) => {
     setSelectedSubscription(subscription);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     if (!selectedSubscription) return;
-    
+
     setIsDeleting(true);
-    
+
     try {
       const response = await fetch(`/api/admin/client-subscriptions/${selectedSubscription._id}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete subscription');
       }
-      
+
       showToast('Subscription deleted successfully', 'success');
       onRefresh();
       setIsDeleteModalOpen(false);
@@ -144,7 +146,7 @@ const ClientPlanList: React.FC<ClientPlanListProps> = ({
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {clientSubscriptions.length > 0 ? (
+          {clientSubscriptions.length > 0 || isLoading ? (
             clientSubscriptions.map((subscription) => (
               <tr key={subscription._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -212,7 +214,7 @@ const ClientPlanList: React.FC<ClientPlanListProps> = ({
           selectableClients={false}
         />
       )}
-      
+
       {/* Delete Confirmation Modal */}
       {selectedSubscription && (
         <Modal
@@ -226,7 +228,7 @@ const ClientPlanList: React.FC<ClientPlanListProps> = ({
               Are you sure you want to delete the subscription for <span className="font-bold">{selectedSubscription.clientName}</span>?
               This action cannot be undone.
             </p>
-            
+
             <div className="flex justify-end space-x-3 pt-4 mt-4 border-t border-gray-200">
               <button
                 type="button"
