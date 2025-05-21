@@ -1,6 +1,6 @@
-import Exception, { IException } from '@/models/Exception';
+import { WorkflowException } from '@/models';
+import { IWorkflowException } from '@/models/WorkflowException';
 import dbConnect from './db';
-import mongoose from 'mongoose';
 
 // Define types for function parameters
 type FilterQuery = Record<string, any>;
@@ -24,8 +24,20 @@ export const exceptionService = {
   async getExceptions(filter: FilterQuery = {}, options: QueryOptions = {}) {
     await dbConnect();
 
-    const { sort = { reportedAt: -1 }, limit, skip } = options;
-    let query = Exception.find(filter);
+    const { sort = { createdAt: -1 }, limit, skip } = options;
+    let query = WorkflowException.find(filter)
+      .populate({
+        path: 'workflowId',
+        select: 'name departmentId clientId',
+        populate: {
+          path: 'departmentId',
+          select: 'name'
+        }
+      })
+      .populate({
+        path: 'clientId',
+        select: 'companyName'
+      });
 
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
@@ -41,7 +53,17 @@ export const exceptionService = {
    */
   async getExceptionById(exceptionId: string) {
     await dbConnect();
-    return Exception.findById(exceptionId).lean();
+    return WorkflowException.findById(exceptionId).lean();
+  },
+
+  /**
+   * Delete an exception by ID
+   * @param {string} exceptionId - Exception ID
+   * @returns {Promise<Object>} Deleted exception document
+   */
+  async deleteException(exceptionId: string) {
+    await dbConnect();
+    return WorkflowException.findByIdAndDelete(exceptionId).lean();
   },
 
   /**
@@ -51,9 +73,9 @@ export const exceptionService = {
    */
   async getExceptionsByWorkflowId(workflowId: string, options: QueryOptions = {}) {
     await dbConnect();
-    
-    const { sort = { reportedAt: -1 }, limit, skip } = options;
-    let query = Exception.find({ workflowId });
+
+    const { sort = { createdAt: -1 }, limit, skip } = options;
+    let query = WorkflowException.find({ workflowId });
 
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
@@ -69,9 +91,9 @@ export const exceptionService = {
    */
   async getExceptionsByClientId(clientId: string, options: QueryOptions = {}) {
     await dbConnect();
-    
-    const { sort = { reportedAt: -1 }, limit, skip } = options;
-    let query = Exception.find({ clientId });
+
+    const { sort = { createdAt: -1 }, limit, skip } = options;
+    let query = WorkflowException.find({ clientId });
 
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
@@ -85,9 +107,9 @@ export const exceptionService = {
    * @param {Object} exceptionData - Exception data
    * @returns {Promise<Object>} Created exception document
    */
-  async createException(exceptionData: Partial<IException>) {
+  async createException(exceptionData: Partial<IWorkflowException>) {
     await dbConnect();
-    const exception = new Exception(exceptionData);
+    const exception = new WorkflowException(exceptionData);
     return exception.save();
   },
 
@@ -97,12 +119,12 @@ export const exceptionService = {
    * @param {Object} updateData - Data to update
    * @returns {Promise<Object>} Updated exception document
    */
-  async updateException(exceptionId: string, updateData: Partial<IException>) {
+  async updateException(exceptionId: string, updateData: Partial<IWorkflowException>) {
     await dbConnect();
-    return Exception.findByIdAndUpdate(
+    return WorkflowException.findByIdAndUpdate(
       exceptionId,
-      updateData,
-      { new: true, runValidators: true }
+      { $set: updateData },
+      { new: true }
     ).lean();
   },
 
@@ -112,12 +134,12 @@ export const exceptionService = {
    * @param {string} status - New status ('NEW', 'IN_PROGRESS', 'RESOLVED', 'IGNORED')
    * @returns {Promise<Object>} Updated exception document
    */
-  async updateExceptionStatus(exceptionId: string, status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'IGNORED') {
+  async updateStatus(exceptionId: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED') {
     await dbConnect();
-    return Exception.findByIdAndUpdate(
+    return WorkflowException.findByIdAndUpdate(
       exceptionId,
-      { status },
-      { new: true, runValidators: true }
+      { $set: { status } },
+      { new: true }
     ).lean();
   },
 
@@ -129,10 +151,10 @@ export const exceptionService = {
    */
   async addNotification(exceptionId: string, notification: { userId: string, method: 'EMAIL' | 'SMS' }) {
     await dbConnect();
-    return Exception.findByIdAndUpdate(
+    return WorkflowException.findByIdAndUpdate(
       exceptionId,
-      { 
-        $push: { 
+      {
+        $push: {
           notifications: {
             userId: notification.userId,
             notifiedAt: new Date(),
@@ -140,7 +162,7 @@ export const exceptionService = {
           }
         }
       },
-      { new: true, runValidators: true }
+      { new: true }
     ).lean();
   },
 
@@ -151,9 +173,9 @@ export const exceptionService = {
    */
   async getExceptionsBySeverity(severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW', options: QueryOptions = {}) {
     await dbConnect();
-    
-    const { sort = { reportedAt: -1 }, limit, skip } = options;
-    let query = Exception.find({ severity });
+
+    const { sort = { createdAt: -1 }, limit, skip } = options;
+    let query = WorkflowException.find({ severity });
 
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
@@ -167,11 +189,11 @@ export const exceptionService = {
    * @param {string} status - Exception status
    * @returns {Promise<Array>} Array of exception documents
    */
-  async getExceptionsByStatus(status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'IGNORED', options: QueryOptions = {}) {
+  async getExceptionsByStatus(status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED', options: QueryOptions = {}) {
     await dbConnect();
-    
-    const { sort = { reportedAt: -1 }, limit, skip } = options;
-    let query = Exception.find({ status });
+
+    const { sort = { createdAt: -1 }, limit, skip } = options;
+    let query = WorkflowException.find({ status });
 
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
