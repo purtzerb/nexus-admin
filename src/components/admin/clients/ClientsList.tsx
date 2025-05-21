@@ -4,9 +4,23 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { showToast } from '@/lib/toast/toastUtils';
 // These imports should work once the files are properly created
 import AddClientModal from './AddClientModal';
 import DeleteClientModal from './DeleteClientModal';
+
+interface PipelineStep {
+  name: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  completedDate?: Date;
+  order: number;
+}
+
+interface DocumentLink {
+  title: string;
+  url: string;
+  type: string;
+}
 
 interface Client {
   _id: string;
@@ -27,6 +41,8 @@ interface Client {
     exceptions?: { email?: boolean; sms?: boolean };
     access?: { billing?: boolean; admin?: boolean };
   }[];
+  pipelineSteps?: PipelineStep[];
+  documentLinks?: DocumentLink[];
 }
 
 const fetchClients = async (): Promise<Client[]> => {
@@ -60,23 +76,39 @@ const ClientsList: React.FC = () => {
     refetch();
     setIsAddClientModalOpen(false);
   };
-  
-  const handleEditClient = (client: Client) => {
-    setClientToEdit(client);
-    setIsEditClientModalOpen(true);
+
+  const handleEditClient = async (client: Client) => {
+    try {
+      // Fetch complete client data including users
+      const response = await fetch(`/api/admin/clients/${client._id}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch client details');
+      }
+      
+      const data = await response.json();
+      console.log('Fetched complete client data for editing:', data.client);
+      
+      // Set the complete client data with users
+      setClientToEdit(data.client);
+      setIsEditClientModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+      showToast('Failed to load client details. Please try again.', 'error');
+    }
   };
-  
+
   const handleEditClientSuccess = () => {
     // No need to refetch as we're using React Query cache updates
     setIsEditClientModalOpen(false);
     setClientToEdit(null);
   };
-  
+
   const handleDeleteClient = (client: Client) => {
     setClientToDelete(client);
     setIsDeleteClientModalOpen(true);
   };
-  
+
   const handleDeleteClientSuccess = () => {
     // Explicitly refetch to ensure the list is updated
     refetch();
@@ -121,22 +153,22 @@ const ClientsList: React.FC = () => {
           <thead className="bg-darkerBackground">
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Client Name
+                Name
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Contact Email
+                URL
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Phone
+                # SEs
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Industry
+                # Users
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Status
+                Pipeline
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                Assigned SEs
+                Documents
               </th>
               <th scope="col" className="relative px-6 py-3">
                 <span className="sr-only">Actions</span>
@@ -146,12 +178,12 @@ const ClientsList: React.FC = () => {
           <tbody className="bg-cardBackground divide-y divide-buttonBorder">
             {clients && clients.length > 0 ? (
               clients.map((client) => (
-                <tr 
-                  key={client._id} 
+                <tr
+                  key={client._id}
                   onClick={(e) => {
                     // Don't navigate if clicking on action buttons
                     if ((e.target as HTMLElement).closest('button')) return;
-                    
+
                     // Ensure we have a string ID
                     const clientId = String(client._id);
                     console.log('Client clicked:', client.companyName, 'ID:', clientId);
@@ -166,40 +198,54 @@ const ClientsList: React.FC = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-textPrimary">{client.users && client.users.length > 0 ? client.users[0].email : '-'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-textPrimary">{client.phone || '-'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-textPrimary">{client.industry || '-'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      client.status === 'ACTIVE' 
-                        ? 'bg-success bg-opacity-10 text-success' 
-                        : client.status === 'INACTIVE'
-                        ? 'bg-error bg-opacity-10 text-error'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {client.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-wrap gap-1">
-                      {client.assignedSolutionsEngineerIds && client.assignedSolutionsEngineerIds.length > 0 ? (
-                        client.assignedSolutionsEngineerIds.map((seId: string, index: number) => (
-                          <span key={seId} className="bg-gray-100 px-2 py-1 rounded text-xs" title={`Solution Engineer ID: ${seId}`}>
-                            SE {index + 1}
-                          </span>
-                        ))
+                    <div className="text-sm text-textPrimary">
+                      {client.companyUrl ? (
+                        <a
+                          href={client.companyUrl.startsWith('http') ? client.companyUrl : `https://${client.companyUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-buttonPrimary hover:underline"
+                        >
+                          {client.companyUrl}
+                        </a>
                       ) : (
-                        <span className="text-sm text-textSecondary">No SEs assigned</span>
+                        '-'
                       )}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-textPrimary">
+                      {client.assignedSolutionsEngineerIds ? client.assignedSolutionsEngineerIds.length : 0}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-textPrimary">
+                      {client.users ? client.users.length : 0}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-textPrimary">
+                      {(() => {
+                        const pipelineSteps = client.pipelineSteps || [];
+                        const completedSteps = pipelineSteps.filter((step: PipelineStep) => step.status === 'completed').length;
+                        const totalSteps = pipelineSteps.length;
+                        return `${completedSteps}/${totalSteps}`;
+                      })()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-textPrimary">
+                      {(() => {
+                        const documentLinks = client.documentLinks || [];
+                        const documentsWithUrls = documentLinks.filter((doc: DocumentLink) => doc.url && doc.url.trim() !== '').length;
+                        const totalDocuments = documentLinks.length;
+                        return `${documentsWithUrls}/${totalDocuments}`;
+                      })()}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
+                    <button
                       onClick={() => handleEditClient(client)}
                       className="text-textPrimary hover:text-textSecondary mr-3 transition-opacity duration-200"
                       aria-label="Edit client"
@@ -208,7 +254,7 @@ const ClientsList: React.FC = () => {
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                       </svg>
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteClient(client)}
                       className="text-error hover:text-opacity-75 transition-opacity duration-200"
                       aria-label="Delete client"
@@ -222,7 +268,7 @@ const ClientsList: React.FC = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-sm text-textSecondary">
+                <td colSpan={8} className="px-6 py-4 text-center text-sm text-textSecondary">
                   No clients found.
                 </td>
               </tr>
@@ -237,7 +283,7 @@ const ClientsList: React.FC = () => {
         onSuccess={handleAddClientSuccess}
         mode="create"
       />
-      
+
       <AddClientModal
         isOpen={isEditClientModalOpen}
         onClose={() => {
@@ -248,7 +294,7 @@ const ClientsList: React.FC = () => {
         client={clientToEdit}
         mode="update"
       />
-      
+
       <DeleteClientModal
         isOpen={isDeleteClientModalOpen}
         onClose={() => {
