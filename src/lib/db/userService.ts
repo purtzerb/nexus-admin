@@ -125,6 +125,17 @@ export const userService = {
       role: 'SOLUTIONS_ENGINEER',
       assignedClientIds: clientId
     }).lean() as unknown as LeanUserDocument[];
+  },
+  
+  /**
+   * Update multiple users matching a filter
+   * @param {Object} filter - MongoDB filter object
+   * @param {Object} updateData - Data to update
+   * @returns {Promise<Object>} Update result
+   */
+  async updateManyUsers(filter: FilterQuery, updateData: any) {
+    await dbConnect();
+    return User.updateMany(filter, updateData);
   }
 };
 

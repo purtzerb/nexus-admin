@@ -25,17 +25,35 @@ export interface IClientDepartment extends Document {
 }
 
 // Define Client document interface
+export interface IPipelineStep {
+  name: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  completedDate?: Date;
+  order: number;
+}
+
+export interface IDocumentLink {
+  title: string;
+  url: string;
+  type: string;
+}
+
 export interface IClient extends Document {
+  _id: mongoose.Types.ObjectId;
   companyName: string;
   companyUrl?: string;
   contractStartDate?: Date;
+  contactName?: string;
+  phone?: string;
+  email?: string;
   assignedSolutionsEngineerIds?: mongoose.Types.ObjectId[];
   pipelineProgressCurrentPhase?: string;
+  pipelineSteps?: IPipelineStep[];
+  documentLinks?: IDocumentLink[];
   activeSubscriptionId?: mongoose.Types.ObjectId;
   users?: IClientUser[];
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   industry?: string;
-  contactName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,6 +101,44 @@ const clientUserSchema = new Schema({
   }
 });
 
+const pipelineStepSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed'],
+    default: 'pending'
+  },
+  completedDate: {
+    type: Date
+  },
+  order: {
+    type: Number,
+    required: true
+  }
+});
+
+const documentLinkSchema = new Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  url: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  type: {
+    type: String,
+    required: true,
+    trim: true
+  }
+});
+
 const clientSchema = new Schema<IClient>({
   companyName: {
     type: String,
@@ -107,6 +163,14 @@ const clientSchema = new Schema<IClient>({
     type: String,
     trim: true,
     required: false
+  },
+  pipelineSteps: {
+    type: [pipelineStepSchema],
+    default: []
+  },
+  documentLinks: {
+    type: [documentLinkSchema],
+    default: []
   },
   // This links to the specific instance of a subscription for this client
   activeSubscriptionId: {

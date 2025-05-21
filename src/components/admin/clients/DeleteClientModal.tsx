@@ -50,15 +50,24 @@ const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
       // Directly update the React Query cache to remove the deleted client
       // This ensures the UI updates instantly without waiting for a refetch
       queryClient.setQueryData(['clients'], (oldData: any) => {
-        if (!oldData || !Array.isArray(oldData.clients)) {
+        if (!oldData) {
           return oldData;
         }
         
-        // Filter out the deleted client
-        return {
-          ...oldData,
-          clients: oldData.clients.filter((c: any) => c._id !== client._id)
-        };
+        // If oldData is an array (direct clients array)
+        if (Array.isArray(oldData)) {
+          return oldData.filter((c: any) => c._id !== client._id);
+        }
+        
+        // If oldData is an object with a clients property (wrapped in an object)
+        if (oldData && typeof oldData === 'object' && Array.isArray(oldData.clients)) {
+          return {
+            ...oldData,
+            clients: oldData.clients.filter((c: any) => c._id !== client._id)
+          };
+        }
+        
+        return oldData;
       });
       
       // Also invalidate the queries to ensure data consistency

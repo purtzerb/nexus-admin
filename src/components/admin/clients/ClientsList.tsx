@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 // These imports should work once the files are properly created
 import AddClientModal from './AddClientModal';
 import DeleteClientModal from './DeleteClientModal';
@@ -39,6 +40,7 @@ const fetchClients = async (): Promise<Client[]> => {
 
 const ClientsList: React.FC = () => {
   const { user, isAdmin } = useAuth();
+  const router = useRouter();
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isDeleteClientModalOpen, setIsDeleteClientModalOpen] = useState(false);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
@@ -76,9 +78,14 @@ const ClientsList: React.FC = () => {
   };
   
   const handleDeleteClientSuccess = () => {
-    // No need to refetch as we're using React Query cache updates
+    // Explicitly refetch to ensure the list is updated
+    refetch();
     setIsDeleteClientModalOpen(false);
     setClientToDelete(null);
+  };
+
+  const handleClientClick = (clientId: string) => {
+    router.push(`/admin/clients/${clientId}`);
   };
 
   if (isLoading) {
@@ -138,7 +145,15 @@ const ClientsList: React.FC = () => {
           <tbody className="bg-cardBackground divide-y divide-buttonBorder">
             {clients && clients.length > 0 ? (
               clients.map((client) => (
-                <tr key={client._id} className="hover:bg-darkerBackground transition-colors duration-150">
+                <tr 
+                  key={client._id} 
+                  onClick={(e) => {
+                    // Don't navigate if clicking on action buttons
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    handleClientClick(client._id);
+                  }}
+                  className="cursor-pointer hover:bg-darkerBackground transition-colors duration-150"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-textPrimary">{client.companyName}</div>
                     {client.contactName && (

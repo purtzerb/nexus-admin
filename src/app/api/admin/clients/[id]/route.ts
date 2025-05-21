@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clientService } from '@/lib/db/clientService';
-import { userService } from '@/lib/db/userService';
+import clientService from '@/lib/db/clientService';
+import userService from '@/lib/db/userService';
 import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
-import { IClient } from '@/models/Client';
+import { IClient, IPipelineStep, IDocumentLink } from '@/models/Client';
 import mongoose from 'mongoose';
 
 /**
@@ -109,6 +109,8 @@ export async function PUT(
  * When a client is deleted:
  * 1. All CLIENT_USER users associated with the client are deleted
  * 2. Solution Engineers are de-associated from the client but not deleted
+ * 3. All pipeline steps and document links associated with the client are deleted
+ * 4. Any other resources associated with the client are cleaned up
  */
 export async function DELETE(
   request: NextRequest,
@@ -139,20 +141,34 @@ export async function DELETE(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
+    // Cast client to any to access properties safely
+    const clientData = client as any;
+    
     // Start transaction
     session.startTransaction();
     
     // 1. Delete all CLIENT_USER users associated with this client
     console.log(`Deleting users associated with client ${clientId}`);
     const clientUsers = await userService.getClientUsers(clientId);
+    
+    // Delete each client user
     for (const clientUser of clientUsers) {
       console.log(`Deleting client user: ${clientUser.email}`);
       await userService.deleteUser(clientUser._id.toString());
     }
     
+    console.log(`Deleted ${clientUsers.length} client users`);
+    
+    // Log the pipeline steps and document links that will be deleted
+    if (clientData.pipelineSteps && Array.isArray(clientData.pipelineSteps)) {
+      console.log(`Deleting ${clientData.pipelineSteps.length} pipeline steps for client ${clientId}`);
+    }
+    
+    if (clientData.documentLinks && Array.isArray(clientData.documentLinks)) {
+      console.log(`Deleting ${clientData.documentLinks.length} document links for client ${clientId}`);
+    }
+    
     // 2. De-associate all Solution Engineers from this client
-    // Cast client to any to access assignedSolutionsEngineerIds
-    const clientData = client as any;
     if (clientData.assignedSolutionsEngineerIds && Array.isArray(clientData.assignedSolutionsEngineerIds) && clientData.assignedSolutionsEngineerIds.length > 0) {
       console.log(`De-associating SEs from client ${clientId}`);
       for (const seId of clientData.assignedSolutionsEngineerIds) {
@@ -165,17 +181,25 @@ export async function DELETE(
       }
     }
     
-    // 3. Delete the client itself
+    // 3. Delete the client itself (this will also delete embedded documents like pipeline steps and document links)
     console.log(`Deleting client ${clientId}`);
     await clientService.deleteClient(clientId);
     
     // Commit the transaction
     await session.commitTransaction();
     
+    // Prepare response with information about what was deleted
+    const pipelineStepsCount = clientData.pipelineSteps?.length || 0;
+    const documentLinksCount = clientData.documentLinks?.length || 0;
+    
     return NextResponse.json({ 
       success: true,
-      message: 'Client deleted successfully along with associated users',
-      deletedUsers: clientUsers.length
+      message: 'Client and all associated data deleted successfully',
+      deletedData: {
+        clientUsers: clientUsers.length,
+        pipelineSteps: pipelineStepsCount,
+        documentLinks: documentLinksCount
+      }
     });
   } catch (error) {
     // Abort transaction on error

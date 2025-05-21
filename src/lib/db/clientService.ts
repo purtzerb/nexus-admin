@@ -11,6 +11,12 @@ interface QueryOptions {
   skip?: number;
 }
 
+interface UpdateOptions {
+  new?: boolean;
+  runValidators?: boolean;
+  arrayFilters?: Array<Record<string, any>>;
+}
+
 /**
  * Client service for handling client-related operations
  */
@@ -69,14 +75,15 @@ export const clientService = {
    * Update an existing client
    * @param {string} clientId - Client ID
    * @param {Object} updateData - Data to update
+   * @param {Object} options - Update options
    * @returns {Promise<Object>} Updated client document
    */
-  async updateClient(clientId: string, updateData: Partial<IClient>) {
+  async updateClient(clientId: string, updateData: any, options: UpdateOptions = { new: true, runValidators: true }) {
     await dbConnect();
     return Client.findByIdAndUpdate(
       clientId,
       updateData,
-      { new: true, runValidators: true }
+      options
     ).lean();
   },
 
@@ -144,6 +151,40 @@ export const clientService = {
       clientId,
       { pipelineProgressCurrentPhase: phaseName },
       { new: true, runValidators: true }
+    ).lean();
+  },
+
+  /**
+   * Update a pipeline step for a client
+   * @param {string} clientId - Client ID
+   * @param {string} stepName - Name of the pipeline step
+   * @param {string} status - New status (pending, in_progress, completed)
+   * @returns {Promise<Object>} Updated client document
+   */
+  async updatePipelineStep(clientId: string, stepName: string, status: 'pending' | 'in_progress' | 'completed') {
+    await dbConnect();
+    const updateData: any = {
+      $set: {
+        'pipelineSteps.$[step].status': status
+      }
+    };
+    
+    // If step is completed, set the completion date
+    if (status === 'completed') {
+      updateData.$set['pipelineSteps.$[step].completedDate'] = new Date();
+    } else {
+      // If step is not completed, remove the completion date
+      updateData.$set['pipelineSteps.$[step].completedDate'] = null;
+    }
+    
+    return Client.findByIdAndUpdate(
+      clientId,
+      updateData,
+      { 
+        new: true, 
+        runValidators: true,
+        arrayFilters: [{ 'step.name': stepName }]
+      }
     ).lean();
   },
 
