@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { clientService } from '@/lib/db/clientService';
+import { userService } from '@/lib/db/userService';
 import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import { IClient } from '@/models/Client';
+import mongoose from 'mongoose';
 
 /**
  * GET /api/admin/clients/[id]
@@ -103,11 +105,18 @@ export async function PUT(
  * DELETE /api/admin/clients/[id]
  * Delete a specific client
  * Only accessible by admins
+ * 
+ * When a client is deleted:
+ * 1. All CLIENT_USER users associated with the client are deleted
+ * 2. Solution Engineers are de-associated from the client but not deleted
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Start a MongoDB session for transaction
+  const session = await mongoose.startSession();
+  
   try {
     await dbConnect();
     
@@ -130,11 +139,57 @@ export async function DELETE(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
+    // Start transaction
+    session.startTransaction();
+    
+    // 1. Delete all CLIENT_USER users associated with this client
+    console.log(`Deleting users associated with client ${clientId}`);
+    const clientUsers = await userService.getClientUsers(clientId);
+    for (const clientUser of clientUsers) {
+      console.log(`Deleting client user: ${clientUser.email}`);
+      await userService.deleteUser(clientUser._id.toString());
+    }
+    
+    // 2. De-associate all Solution Engineers from this client
+    // Cast client to any to access assignedSolutionsEngineerIds
+    const clientData = client as any;
+    if (clientData.assignedSolutionsEngineerIds && Array.isArray(clientData.assignedSolutionsEngineerIds) && clientData.assignedSolutionsEngineerIds.length > 0) {
+      console.log(`De-associating SEs from client ${clientId}`);
+      for (const seId of clientData.assignedSolutionsEngineerIds) {
+        console.log(`De-associating SE ${seId} from client ${clientId}`);
+        // Remove this client from the SE's assignedClientIds
+        await userService.updateUser(
+          seId.toString(),
+          { $pull: { assignedClientIds: clientId } } as any
+        );
+      }
+    }
+    
+    // 3. Delete the client itself
+    console.log(`Deleting client ${clientId}`);
     await clientService.deleteClient(clientId);
     
-    return NextResponse.json({ success: true });
+    // Commit the transaction
+    await session.commitTransaction();
+    
+    return NextResponse.json({ 
+      success: true,
+      message: 'Client deleted successfully along with associated users',
+      deletedUsers: clientUsers.length
+    });
   } catch (error) {
+    // Abort transaction on error
+    await session.abortTransaction();
+    
     console.error('Error deleting client:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
+  } finally {
+    // End session
+    session.endSession();
   }
 }

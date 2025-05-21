@@ -43,6 +43,16 @@ export const clientService = {
     await dbConnect();
     return Client.findById(clientId).lean();
   },
+  
+  /**
+   * Get a single client by company name
+   * @param {string} companyName - Company name
+   * @returns {Promise<Object>} Client document
+   */
+  async getClientByName(companyName: string) {
+    await dbConnect();
+    return Client.findOne({ companyName: { $regex: new RegExp(`^${companyName}$`, 'i') } }).lean();
+  },
 
   /**
    * Create a new client

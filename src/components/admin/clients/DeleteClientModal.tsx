@@ -40,14 +40,34 @@ const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete client');
+        throw new Error(errorData.error || 'Failed to delete client');
       }
 
-      // Update cache
+      // Get the response data
+      const data = await response.json();
+      console.log('Client deleted successfully:', data);
+
+      // Directly update the React Query cache to remove the deleted client
+      // This ensures the UI updates instantly without waiting for a refetch
+      queryClient.setQueryData(['clients'], (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData.clients)) {
+          return oldData;
+        }
+        
+        // Filter out the deleted client
+        return {
+          ...oldData,
+          clients: oldData.clients.filter((c: any) => c._id !== client._id)
+        };
+      });
+      
+      // Also invalidate the queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       
       onSuccess();
     } catch (err) {
+      console.error('Error deleting client:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
       setIsDeleting(false);
@@ -67,7 +87,15 @@ const DeleteClientModal: React.FC<DeleteClientModalProps> = ({
           <p className="text-textPrimary mb-4">
             Are you sure you want to delete the client <span className="font-semibold">{client.companyName}</span>?
           </p>
-          <p className="text-textSecondary text-sm mb-6">
+          <div className="bg-darkerBackground p-3 rounded-md mb-4">
+            <h4 className="font-medium text-sm mb-2">This will:</h4>
+            <ul className="list-disc pl-5 text-sm text-textSecondary space-y-1">
+              <li>Delete all client users associated with this client</li>
+              <li>Remove this client from all solution engineers' assignments</li>
+              <li>Delete all client data permanently</li>
+            </ul>
+          </div>
+          <p className="text-error text-sm mb-6 font-medium">
             This action cannot be undone. All data associated with this client will be permanently removed.
           </p>
           

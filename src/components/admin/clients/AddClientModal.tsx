@@ -11,6 +11,7 @@ import { TextInput } from '@/components/shared/inputs';
 
 // Define interfaces for client data
 interface ClientDepartment {
+  _id?: string;
   name: string;
 }
 
@@ -18,7 +19,10 @@ interface ClientUser {
   name: string;
   email: string;
   phone?: string;
-  department?: string;
+  department?: {
+    id: string;
+    name: string;
+  };
   exceptions?: {
     email?: boolean;
     sms?: boolean;
@@ -183,11 +187,35 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       return;
     }
 
+    // Get department name from the selected department ID
+    let departmentObj = undefined;
+    if (userDepartment) {
+      // Find the selected department in the options
+      const selectedOption = queryClient.getQueryData<any>(['departments', ''])?.departments?.find(
+        (dept: any) => dept._id === userDepartment
+      );
+
+      if (selectedOption) {
+        departmentObj = {
+          id: userDepartment,
+          name: selectedOption.name
+        };
+      } else {
+        // Fallback if we can't find the department name
+        departmentObj = {
+          id: userDepartment,
+          name: 'Unknown Department'
+        };
+      }
+      console.log(`Adding user with department: ${departmentObj.name} (${departmentObj.id})`);
+    }
+
+    // Create a new user with the form data
     const newUser: ClientUser = {
       name: userName.trim(),
       email: userEmail.trim().toLowerCase(),
       phone: userPhone.trim() || undefined,
-      department: userDepartment || undefined,
+      department: departmentObj, // Store both ID and name
       exceptions: {
         email: userEmailException,
         sms: userSmsException,
@@ -235,6 +263,52 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     setAssignedSEs(assignedSEs.filter(id => id !== seId));
   };
 
+  // Check if a client name already exists
+  const checkClientNameExists = async (name: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/admin/clients/check-name?name=${encodeURIComponent(name)}`);
+      if (!response.ok) {
+        // If the endpoint doesn't exist yet, we'll assume the name is unique
+        if (response.status === 404) {
+          return false;
+        }
+        throw new Error('Failed to check client name');
+      }
+      const data = await response.json();
+      return data.exists;
+    } catch (error) {
+      console.error('Error checking client name:', error);
+      // In case of error, we'll let the backend validation handle it
+      return false;
+    }
+  };
+
+  // Check if any user emails already exist
+  const checkUserEmailsExist = async (emails: string[]): Promise<string[]> => {
+    try {
+      const response = await fetch('/api/admin/users/check-emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emails }),
+      });
+      if (!response.ok) {
+        // If the endpoint doesn't exist yet, we'll assume the emails are unique
+        if (response.status === 404) {
+          return [];
+        }
+        throw new Error('Failed to check user emails');
+      }
+      const data = await response.json();
+      return data.existingEmails || [];
+    } catch (error) {
+      console.error('Error checking user emails:', error);
+      // In case of error, we'll let the backend validation handle it
+      return [];
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,14 +318,53 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       return;
     }
 
+    if (!companyUrl.trim()) {
+      showToast('Company URL is required', 'error')
+      return;
+    }
+    
+    // Check if any users have been added
+    if (users.length === 0) {
+      showToast('At least one user is required', 'error');
+      return;
+    }
+
     try {
+      // Check if client name already exists
+      const nameExists = await checkClientNameExists(companyName.trim());
+      if (nameExists) {
+        showToast('A client with this name already exists', 'error');
+        return;
+      }
+      
+      // Check if any user emails already exist
+      const userEmails = users.map(user => user.email);
+      const existingEmails = await checkUserEmailsExist(userEmails);
+      if (existingEmails.length > 0) {
+        showToast(`The following emails already exist: ${existingEmails.join(', ')}`, 'error');
+        return;
+      }
+
+      // Prepare client data for submission - all client creation, user creation, and SE association
+      // will be handled in a single API call on the backend
+    
+      // Map users to the format expected by the API (with department as ID only)
+      const mappedUsers = users.map(user => ({
+        ...user,
+        // If department exists, send only the ID
+        department: user.department ? user.department.id : undefined
+      }));
+      
       const clientData = {
         companyName: companyName.trim(),
         companyUrl: companyUrl.trim() || undefined,
-        users,
+        users: mappedUsers,
+        departments,
         assignedSolutionsEngineerIds: assignedSEs,
+        status: 'ACTIVE', // Set client as active by default
       };
 
+      // Create the client with a single API call
       const response = await fetch('/api/admin/clients', {
         method: 'POST',
         headers: {
@@ -265,8 +378,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
         throw new Error(errorData.error || 'Failed to create client');
       }
 
-      showToast('Client added successfully', 'success');
+      showToast('Client and associated users created successfully', 'success');
+      
+      // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
 
       // Call the appropriate callback
       if (onSuccess) {
@@ -297,9 +413,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
         staleTime: 30000, // 30 seconds
       });
 
-      // Map API response to options format
+      // Map API response to options format - use department ID as value
       return result.departments.map((dept: any) => ({
-        value: dept.name,
+        value: dept._id, // Use the department ID as the value
         label: dept.clientCount ? `${dept.name} (${dept.clientCount} clients)` : dept.name
       }));
     } catch (error) {
@@ -309,7 +425,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       if (departments.length > 0) {
         return departments
           .filter(dept => dept.name.toLowerCase().includes(query.toLowerCase()))
-          .map(dept => ({ value: dept.name, label: dept.name }));
+          .map(dept => ({
+            // If we have an _id, use it, otherwise use the name
+            value: dept._id || dept.name,
+            label: dept.name
+          }));
       }
 
       return [];
@@ -326,7 +446,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           if (!query.trim() && solutionsEngineers && solutionsEngineers.length > 0) {
             return { users: solutionsEngineers };
           }
-          
+
           const response = await fetch(`/api/admin/solutions-engineers/search?q=${encodeURIComponent(query)}&limit=5`);
           if (!response.ok) {
             throw new Error('Failed to fetch solutions engineers');
@@ -387,7 +507,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               </div>
               <div className="mb-4">
                 <label htmlFor="companyUrl" className="block text-sm font-medium mb-1">
-                  Company URL
+                  Company URL <span className="text-error">*</span>
                 </label>
                 <input
                   id="companyUrl"
@@ -522,7 +642,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                     <div>{user.name}</div>
                     <div>{user.email}</div>
                     <div>{user.phone || '-'}</div>
-                    <div>{user.department || '-'}</div>
+                    <div>{user.department ? user.department.name : '-'}</div>
                     <div>
                       {user.exceptions?.email && <span className="mr-1">Email</span>}
                       {user.exceptions?.sms && <span>SMS</span>}

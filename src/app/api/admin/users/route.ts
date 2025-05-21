@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/admin/users
- * Create a new admin user
+ * Create a new user (admin, solutions engineer, or client user)
  * Only accessible by admins
  */
 export async function POST(request: NextRequest) {
@@ -71,11 +71,35 @@ export async function POST(request: NextRequest) {
     }
     
     const data = await request.json();
-    const { name, email, password, phone } = data;
+    const { 
+      name, 
+      email, 
+      password, 
+      phone, 
+      role = 'ADMIN',
+      clientId,
+      departmentId,
+      notifyByEmailForExceptions,
+      notifyBySmsForExceptions,
+      hasBillingAccess,
+      isClientAdmin,
+      costRate,
+      billRate,
+      assignedClientIds
+    } = data;
     
     // Validate required fields
     if (!name || !email) {
       return NextResponse.json({ error: 'Missing required fields: name and email are required' }, { status: 400 });
+    }
+    
+    // Validate role-specific required fields
+    if (role === 'CLIENT_USER' && !clientId) {
+      return NextResponse.json({ error: 'Missing required field: clientId is required for CLIENT_USER' }, { status: 400 });
+    }
+    
+    if (role === 'SOLUTIONS_ENGINEER' && (!costRate || !billRate)) {
+      return NextResponse.json({ error: 'Missing required fields: costRate and billRate are required for SOLUTIONS_ENGINEER' }, { status: 400 });
     }
     
     // Check if user with email already exists
@@ -84,13 +108,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
     
-    // Create admin user data
+    // Create user data with appropriate role
     const userData: any = {
       name,
       email: email.toLowerCase(),
-      role: 'ADMIN' as const,
+      role,
       phone
     };
+    
+    // Add role-specific fields
+    if (role === 'CLIENT_USER') {
+      userData.clientId = clientId;
+      userData.departmentId = departmentId;
+      userData.notifyByEmailForExceptions = notifyByEmailForExceptions || false;
+      userData.notifyBySmsForExceptions = notifyBySmsForExceptions || false;
+      userData.hasBillingAccess = hasBillingAccess || false;
+      userData.isClientAdmin = isClientAdmin || false;
+    } else if (role === 'SOLUTIONS_ENGINEER') {
+      userData.costRate = costRate;
+      userData.billRate = billRate;
+      userData.assignedClientIds = assignedClientIds || [];
+    }
     
     // Only generate password hash and salt if password is provided
     if (password) {
@@ -107,7 +145,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ user: userWithoutPassword }, { status: 201 });
   } catch (error) {
-    console.error('Error creating admin user:', error);
-    return NextResponse.json({ error: 'Failed to create admin user' }, { status: 500 });
+    console.error('Error creating user:', error);
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

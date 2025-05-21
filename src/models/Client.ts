@@ -32,7 +32,6 @@ export interface IClient extends Document {
   assignedSolutionsEngineerIds?: mongoose.Types.ObjectId[];
   pipelineProgressCurrentPhase?: string;
   activeSubscriptionId?: mongoose.Types.ObjectId;
-  departments?: IClientDepartment[];
   users?: IClientUser[];
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   industry?: string;
@@ -84,14 +83,6 @@ const clientUserSchema = new Schema({
   }
 });
 
-const clientDepartmentSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  }
-});
-
 const clientSchema = new Schema<IClient>({
   companyName: {
     type: String,
@@ -123,8 +114,6 @@ const clientSchema = new Schema<IClient>({
     ref: 'ClientSubscription',
     required: false
   },
-  // New fields based on mockup
-  departments: [clientDepartmentSchema],
   users: [clientUserSchema],
   status: {
     type: String,

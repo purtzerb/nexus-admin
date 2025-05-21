@@ -45,9 +45,13 @@ const ClientsList: React.FC = () => {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
+  // Fetch clients with React Query
   const { data: clients, isLoading, isError, refetch } = useQuery({
     queryKey: ['clients'],
-    queryFn: fetchClients
+    queryFn: fetchClients,
+    // Enable automatic refetching when the component mounts or window regains focus
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const handleAddClientSuccess = () => {
@@ -165,7 +169,7 @@ const ClientsList: React.FC = () => {
                     <div className="flex flex-wrap gap-1">
                       {client.assignedSolutionsEngineerIds && client.assignedSolutionsEngineerIds.length > 0 ? (
                         client.assignedSolutionsEngineerIds.map((seId: string, index: number) => (
-                          <span key={seId} className="bg-gray-100 px-2 py-1 rounded text-xs">
+                          <span key={seId} className="bg-gray-100 px-2 py-1 rounded text-xs" title={`Solution Engineer ID: ${seId}`}>
                             SE {index + 1}
                           </span>
                         ))
