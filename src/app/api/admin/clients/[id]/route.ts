@@ -64,6 +64,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Start a MongoDB session for transaction
+  const session = await mongoose.startSession();
+  
   try {
     await dbConnect();
     
@@ -86,18 +89,131 @@ export async function PUT(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
+    // Start transaction
+    session.startTransaction();
+    
     const data = await request.json();
+    
+    // Extract users and solution engineers from the request data
+    const { users, assignedSolutionsEngineerIds, ...clientUpdateData } = data;
+    
+    // Update basic client information
     const updateData = {
-      ...data,
+      ...clientUpdateData,
       updatedAt: new Date()
     };
     
+    // Update the client
     const updatedClient = await clientService.updateClient(clientId, updateData);
     
-    return NextResponse.json({ client: updatedClient });
+    // Handle users management
+    if (users && Array.isArray(users)) {
+      // Get existing client users
+      const existingUsers = await userService.getClientUsers(clientId);
+      const existingUserIds = existingUsers.map(u => u._id.toString());
+      
+      // Process each user in the request
+      for (const userData of users) {
+        if (userData._id) {
+          // Update existing user
+          console.log(`Updating existing user: ${userData.email}`);
+          await userService.updateUser(userData._id, {
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone,
+            departmentId: userData.department, // Use departmentId instead of department
+            // Handle exceptions and access separately to avoid type errors
+            ...(userData.exceptions ? { 'exceptions.email': userData.exceptions.email, 'exceptions.sms': userData.exceptions.sms } : {}),
+            ...(userData.access ? { 'access.billing': userData.access.billing, 'access.admin': userData.access.admin } : {})
+          });
+          
+          // Remove from existingUserIds to track which ones need to be deleted
+          const index = existingUserIds.indexOf(userData._id.toString());
+          if (index > -1) {
+            existingUserIds.splice(index, 1);
+          }
+        } else {
+          // Create new user
+          console.log(`Creating new user: ${userData.email}`);
+          await userService.createUser({
+            ...userData,
+            role: 'CLIENT_USER',
+            clientId: clientId
+          });
+        }
+      }
+      
+      // Delete users that were not included in the update
+      for (const userId of existingUserIds) {
+        console.log(`Deleting user: ${userId}`);
+        await userService.deleteUser(userId);
+      }
+    }
+    
+    // Handle solutions engineers assignment
+    if (assignedSolutionsEngineerIds && Array.isArray(assignedSolutionsEngineerIds)) {
+      // Get current assigned SEs - cast client to any to access properties safely
+      const clientData = client as any;
+      const currentSEs = clientData.assignedSolutionsEngineerIds || [];
+      const currentSEIds = currentSEs.map((id: any) => id.toString());
+      
+      // Find SEs to add (in new list but not in current list)
+      const sesToAdd = assignedSolutionsEngineerIds.filter(
+        (seId: string) => !currentSEIds.includes(seId.toString())
+      );
+      
+      // Find SEs to remove (in current list but not in new list)
+      const sesToRemove = currentSEIds.filter(
+        (seId: string) => !assignedSolutionsEngineerIds.includes(seId)
+      );
+      
+      // Add new SEs
+      for (const seId of sesToAdd) {
+        console.log(`Assigning SE ${seId} to client ${clientId}`);
+        // Update the SE's assignedClientIds
+        await userService.updateUser(
+          seId.toString(),
+          { $addToSet: { assignedClientIds: clientId } } as any
+        );
+      }
+      
+      // Remove SEs that are no longer assigned
+      for (const seId of sesToRemove) {
+        console.log(`Removing SE ${seId} from client ${clientId}`);
+        // Update the SE's assignedClientIds
+        await userService.updateUser(
+          seId.toString(),
+          { $pull: { assignedClientIds: clientId } } as any
+        );
+      }
+      
+      // Update client with new SE list
+      await clientService.updateClient(clientId, {
+        assignedSolutionsEngineerIds: assignedSolutionsEngineerIds
+      });
+    }
+    
+    // Commit the transaction
+    await session.commitTransaction();
+    
+    // Get the updated client with all changes
+    const finalClient = await clientService.getClientById(clientId);
+    
+    return NextResponse.json({ client: finalClient });
   } catch (error) {
+    // Abort transaction on error
+    await session.abortTransaction();
+    
     console.error('Error updating client:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
+  } finally {
+    // End session
+    session.endSession();
   }
 }
 

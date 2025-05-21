@@ -31,6 +31,7 @@ interface ClientUser {
     billing?: boolean;
     admin?: boolean;
   };
+  _id?: string; // For existing users when editing
 }
 
 interface SolutionsEngineer {
@@ -110,12 +111,61 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     enabled: isOpen,
   });
 
-  // Reset form when modal is opened/closed
+  // Reset form when modal is opened/closed or populate with client data when editing
   useEffect(() => {
     if (!isOpen) {
       resetForm();
+      return;
     }
-  }, [isOpen]);
+    
+    // If we're in edit mode and have client data, populate the form
+    if (mode === 'update' && client) {
+      console.log('Populating form with client data:', client);
+      
+      // Set basic client info
+      setCompanyName(client.companyName || '');
+      setCompanyUrl(client.companyUrl || '');
+      
+      // Set users if they exist
+      if (client.users && Array.isArray(client.users)) {
+        const formattedUsers = client.users.map((user: any) => ({
+          _id: user._id || undefined, // Preserve existing user ID for updates
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department ? {
+            id: typeof user.department === 'object' ? user.department._id : user.department,
+            name: typeof user.department === 'object' ? user.department.name : ''
+          } : undefined,
+          exceptions: {
+            email: user.exceptions?.email || false,
+            sms: user.exceptions?.sms || false
+          },
+          access: {
+            billing: user.access?.billing || false,
+            admin: user.access?.admin || false
+          }
+        }));
+        setUsers(formattedUsers);
+      }
+      
+      // Set departments if they exist in the client data
+      if (client.departments && Array.isArray(client.departments)) {
+        setDepartments(client.departments.map((dept: any) => ({
+          _id: dept._id,
+          name: dept.name
+        })));
+      }
+      
+      // Set assigned solution engineers
+      if (client.assignedSolutionsEngineerIds && Array.isArray(client.assignedSolutionsEngineerIds)) {
+        const seIds = client.assignedSolutionsEngineerIds.map((id: any) => 
+          typeof id === 'object' && id._id ? id._id.toString() : id.toString()
+        );
+        setAssignedSEs(seIds);
+      }
+    }
+  }, [isOpen, client, mode]);
 
   // Reset form to initial state
   const resetForm = () => {
@@ -319,85 +369,118 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     }
 
     if (!companyUrl.trim()) {
-      showToast('Company URL is required', 'error')
+      showToast('Company URL is required', 'error');
       return;
     }
-    
-    // Check if any users have been added
-    if (users.length === 0) {
-      showToast('At least one user is required', 'error');
+
+    // Check if client name already exists (only for new clients)
+    if (mode === 'create' && await checkClientNameExists(companyName)) {
+      showToast('A client with this name already exists', 'error');
       return;
     }
+
+    // Check if any user emails already exist (only for new users)
+    if (mode === 'create' || users.some(user => !user._id)) {
+      const newUserEmails = users
+        .filter(user => !user._id) // Only check emails for new users
+        .map(user => user.email);
+      
+      if (newUserEmails.length > 0) {
+        const existingEmails = await checkUserEmailsExist(newUserEmails);
+        if (existingEmails.length > 0) {
+          showToast(`The following emails already exist: ${existingEmails.join(', ')}`, 'error');
+          return;
+        }
+      }
+    }
+
+    // Prepare client data
+    const clientData = {
+      companyName: companyName.trim(),
+      companyUrl: companyUrl.trim(),
+      status: 'ACTIVE',
+      users: users.map(user => ({
+        // Include _id for existing users to update them instead of creating new ones
+        ...(user._id ? { _id: user._id } : {}),
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        department: user.department?.id,
+        exceptions: {
+          email: user.exceptions?.email,
+          sms: user.exceptions?.sms
+        },
+        access: {
+          billing: user.access?.billing,
+          admin: user.access?.admin
+        }
+      })),
+      departments: departments.map(dept => ({
+        _id: dept._id,
+        name: dept.name
+      })),
+      assignedSolutionsEngineerIds: assignedSEs
+    };
 
     try {
-      // Check if client name already exists
-      const nameExists = await checkClientNameExists(companyName.trim());
-      if (nameExists) {
-        showToast('A client with this name already exists', 'error');
-        return;
-      }
+      let response;
       
-      // Check if any user emails already exist
-      const userEmails = users.map(user => user.email);
-      const existingEmails = await checkUserEmailsExist(userEmails);
-      if (existingEmails.length > 0) {
-        showToast(`The following emails already exist: ${existingEmails.join(', ')}`, 'error');
-        return;
+      if (mode === 'create') {
+        // Create client
+        response = await fetch('/api/admin/clients', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(clientData),
+        });
+      } else {
+        // Update client
+        response = await fetch(`/api/admin/clients/${client._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(clientData),
+        });
       }
-
-      // Prepare client data for submission - all client creation, user creation, and SE association
-      // will be handled in a single API call on the backend
-    
-      // Map users to the format expected by the API (with department as ID only)
-      const mappedUsers = users.map(user => ({
-        ...user,
-        // If department exists, send only the ID
-        department: user.department ? user.department.id : undefined
-      }));
-      
-      const clientData = {
-        companyName: companyName.trim(),
-        companyUrl: companyUrl.trim() || undefined,
-        users: mappedUsers,
-        departments,
-        assignedSolutionsEngineerIds: assignedSEs,
-        status: 'ACTIVE', // Set client as active by default
-      };
-
-      // Create the client with a single API call
-      const response = await fetch('/api/admin/clients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(clientData),
-      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create client');
+        throw new Error(errorData.error || `Failed to ${mode === 'create' ? 'create' : 'update'} client`);
       }
 
-      showToast('Client and associated users created successfully', 'success');
-      
-      // Invalidate relevant queries to refresh data
+      // Get the created/updated client
+      const data = await response.json();
+      console.log(`Client ${mode === 'create' ? 'created' : 'updated'} successfully:`, data);
+
+      // Invalidate and refetch clients query to update the UI
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-
-      // Call the appropriate callback
-      if (onSuccess) {
-        onSuccess();
-      } else if (onClientAdded) {
-        onClientAdded();
+      queryClient.invalidateQueries({ queryKey: ['solutionsEngineers'] });
+      
+      // Also invalidate the specific client query if updating
+      if (mode === 'update' && client?._id) {
+        queryClient.invalidateQueries({ queryKey: ['client', client._id] });
       }
 
+      // Reset form
+      resetForm();
+
+      // Call success callback
+      if (onSuccess) onSuccess();
+      if (onClientAdded) onClientAdded();
+      
+      // Show success message
+      showToast(`Client ${mode === 'create' ? 'created' : 'updated'} successfully`, 'success');
+      
+      // Close the modal
       onClose();
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, `Failed to ${mode === 'create' ? 'create' : 'update'} client`);
     }
   };
 
-  // Search functions for SearchableSelect components
+  // Search function for departments
   const searchDepartments = async (query: string): Promise<Option[]> => {
     try {
       // Use React Query to fetch and cache departments
@@ -422,12 +505,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       console.error('Error searching departments:', error);
 
       // Fallback to local filtering if API fails
-      if (departments.length > 0) {
-        return departments
-          .filter(dept => dept.name.toLowerCase().includes(query.toLowerCase()))
-          .map(dept => ({
-            // If we have an _id, use it, otherwise use the name
-            value: dept._id || dept.name,
+      if (dbDepartments && dbDepartments.length > 0) {
+        return dbDepartments
+          .filter((dept: any) => dept.name.toLowerCase().includes(query.toLowerCase()))
+          .map((dept: any) => ({
+            value: dept._id,
             label: dept.name
           }));
       }
