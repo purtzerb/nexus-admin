@@ -158,10 +158,10 @@ export const clientService = {
    * Update a pipeline step for a client
    * @param {string} clientId - Client ID
    * @param {string} stepName - Name of the pipeline step
-   * @param {string} status - New status (pending, in_progress, completed)
+   * @param {string} status - New status (pending, completed)
    * @returns {Promise<Object>} Updated client document
    */
-  async updatePipelineStep(clientId: string, stepName: string, status: 'pending' | 'in_progress' | 'completed') {
+  async updatePipelineStep(clientId: string, stepName: string, status: 'pending' | 'completed') {
     await dbConnect();
     const updateData: any = {
       $set: {

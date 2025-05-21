@@ -27,7 +27,7 @@ export interface IClientDepartment extends Document {
 // Define Client document interface
 export interface IPipelineStep {
   name: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'completed';
   completedDate?: Date;
   order: number;
 }
@@ -62,7 +62,7 @@ const pipelineStepSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'in_progress', 'completed'],
+    enum: ['pending', 'completed'],
     default: 'pending'
   },
   completedDate: {
