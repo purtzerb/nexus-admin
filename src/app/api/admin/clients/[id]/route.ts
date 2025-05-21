@@ -5,6 +5,7 @@ import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import { IClient, IPipelineStep, IDocumentLink } from '@/models/Client';
 import mongoose from 'mongoose';
+import { generatePasswordHash } from '@/lib/auth/passwordUtils';
 
 /**
  * GET /api/admin/clients/[id]
@@ -148,7 +149,7 @@ export async function PUT(
         const departmentId = userData.department?.id || userData.department;
         
         // Prepare user data with proper field names
-        const userUpdateData = {
+        const userUpdateData: any = {
           name: userData.name,
           email: userData.email,
           phone: userData.phone,
@@ -160,6 +161,14 @@ export async function PUT(
           hasBillingAccess: userData.access?.billing || false,
           isClientAdmin: userData.access?.admin || false
         };
+        
+        // Handle password if provided
+        if (userData.password) {
+          console.log(`Generating password hash for user ${userData.name}`);
+          const { passwordHash, passwordSalt } = generatePasswordHash(userData.password);
+          userUpdateData.passwordHash = passwordHash;
+          userUpdateData.passwordSalt = passwordSalt;
+        }
         
         if (userData._id) {
           // Update existing user

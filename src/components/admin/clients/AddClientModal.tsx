@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { showToast, handleApiError } from '@/lib/toast/toastUtils';
 import Modal from '@/components/ui/Modal';
 import { TextInput } from '@/components/shared/inputs';
+import Tooltip from '@/components/ui/Tooltip';
 
 // Define interfaces for client data
 interface ClientDepartment {
@@ -18,6 +19,7 @@ interface ClientDepartment {
 interface ClientUser {
   name: string;
   email: string;
+  password?: string; // Added password field
   phone?: string;
   department?: {
     id: string;
@@ -72,6 +74,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
   const [users, setUsers] = useState<ClientUser[]>([]);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
   const [userPhone, setUserPhone] = useState('');
   const [userDepartment, setUserDepartment] = useState('');
   const [userEmailException, setUserEmailException] = useState(false);
@@ -133,15 +136,15 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       resetForm();
       return;
     }
-    
+
     // If we're in edit mode and have client data, populate the form
     if (mode === 'update' && client) {
       console.log('Populating form with client data:', client);
-      
+
       // Set basic client info
       setCompanyName(client.companyName || '');
       setCompanyUrl(client.companyUrl || '');
-      
+
       // Set users if they exist in the client data
       if (client.users && Array.isArray(client.users)) {
         console.log('Setting users from client data:', client.users);
@@ -169,7 +172,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
         // Fallback to fetching users from the API if they're not included in the client data
         const loadClientUsers = async () => {
           const clientUsers = await fetchClientUsers(client._id);
-          
+
           if (clientUsers.length > 0) {
             const formattedUsers = clientUsers.map((user: any) => ({
               _id: user._id || undefined,
@@ -192,10 +195,10 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             setUsers(formattedUsers);
           }
         };
-        
+
         loadClientUsers();
       }
-      
+
       // Set departments if they exist in the client data
       if (client.departments && Array.isArray(client.departments)) {
         setDepartments(client.departments.map((dept: any) => ({
@@ -203,10 +206,10 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           name: dept.name
         })));
       }
-      
+
       // Set assigned solution engineers
       if (client.assignedSolutionsEngineerIds && Array.isArray(client.assignedSolutionsEngineerIds)) {
-        const seIds = client.assignedSolutionsEngineerIds.map((id: any) => 
+        const seIds = client.assignedSolutionsEngineerIds.map((id: any) =>
           typeof id === 'object' && id._id ? id._id.toString() : id.toString()
         );
         setAssignedSEs(seIds);
@@ -311,6 +314,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     const newUser: ClientUser = {
       name: userName.trim(),
       email: userEmail.trim().toLowerCase(),
+      password: userPassword.trim() || undefined,
       phone: userPhone.trim() || undefined,
       department: departmentObj, // Store both ID and name
       exceptions: {
@@ -328,6 +332,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     // Reset user form
     setUserName('');
     setUserEmail('');
+    setUserPassword('');
     setUserPhone('');
     setUserDepartment('');
     setUserEmailException(false);
@@ -431,7 +436,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       const newUserEmails = users
         .filter(user => !user._id) // Only check emails for new users
         .map(user => user.email);
-      
+
       if (newUserEmails.length > 0) {
         const existingEmails = await checkUserEmailsExist(newUserEmails);
         if (existingEmails.length > 0) {
@@ -446,22 +451,26 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       companyName: companyName.trim(),
       companyUrl: companyUrl.trim(),
       status: 'ACTIVE',
-      users: users.map(user => ({
-        // Include _id for existing users to update them instead of creating new ones
-        ...(user._id ? { _id: user._id } : {}),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        department: user.department?.id,
-        exceptions: {
-          email: user.exceptions?.email,
-          sms: user.exceptions?.sms
-        },
-        access: {
-          billing: user.access?.billing,
-          admin: user.access?.admin
-        }
-      })),
+      users: users.map(user => {
+        return {
+          // Include _id for existing users to update them instead of creating new ones
+          ...(user._id ? { _id: user._id } : {}),
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          department: user.department?.id,
+          exceptions: {
+            email: user.exceptions?.email,
+            sms: user.exceptions?.sms
+          },
+          access: {
+            billing: user.access?.billing,
+            admin: user.access?.admin
+          },
+          // Include password if provided
+          ...(user.password ? { password: user.password } : {})
+        };
+      }),
       departments: departments.map(dept => ({
         _id: dept._id,
         name: dept.name
@@ -471,7 +480,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
 
     try {
       let response;
-      
+
       if (mode === 'create') {
         // Create client
         response = await fetch('/api/admin/clients', {
@@ -504,7 +513,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       // Invalidate and refetch clients query to update the UI
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['solutionsEngineers'] });
-      
+
       // Also invalidate the specific client query if updating
       if (mode === 'update' && client?._id) {
         queryClient.invalidateQueries({ queryKey: ['client', client._id] });
@@ -516,10 +525,10 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       // Call success callback
       if (onSuccess) onSuccess();
       if (onClientAdded) onClientAdded();
-      
+
       // Show success message
       showToast(`Client ${mode === 'create' ? 'created' : 'updated'} successfully`, 'success');
-      
+
       // Close the modal
       onClose();
     } catch (error) {
@@ -682,9 +691,21 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           {/* Users Table */}
           <div className="mb-4">
             <div className="bg-darkerBackground rounded">
-              <div className="grid grid-cols-6 gap-2 p-2">
-                <div className="font-medium text-sm">Name</div>
-                <div className="font-medium text-sm">Email</div>
+              <div className="grid grid-cols-7 gap-2 p-2">
+                <div className="font-medium text-sm">Name <span className="text-error">*</span></div>
+                <div className="font-medium text-sm">Email <span className="text-error">*</span></div>
+                <div className="font-medium text-sm">
+                  Password
+                  <Tooltip content="If filled out, this allows authentication outside of the Braintrust ecosystem.">
+                    <span className="ml-1 text-textSecondary">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M8 4.5V5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M8 8V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </span>
+                  </Tooltip>
+                </div>
                 <div className="font-medium text-sm">Phone</div>
                 <div className="font-medium text-sm">Department</div>
                 <div className="font-medium text-sm">Exceptions</div>
@@ -693,7 +714,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
 
             {/* User Input Row */}
-            <div className="grid grid-cols-6 gap-2 p-2 items-end">
+            <div className="grid grid-cols-7 gap-2 p-2 items-end">
               <div>
                 <input
                   type="text"
@@ -714,6 +735,19 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               </div>
               <div>
                 <input
+                  type="password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-buttonBorder rounded focus:outline-none focus:ring-1 focus:ring-buttonPrimary"
+                  placeholder="Password (optional)"
+                  autoComplete="new-password"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  name="client-user-password-field"
+                />
+              </div>
+              <div>
+                <input
                   type="tel"
                   value={userPhone}
                   onChange={(e) => setUserPhone(e.target.value)}
@@ -726,7 +760,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                   value={userDepartment}
                   onChange={setUserDepartment}
                   onSearch={searchDepartments}
-                  placeholder="Select Department"
+                  placeholder="Search"
                   emptyMessage="No departments found"
                   initialOptions={dbDepartments ? dbDepartments.map((dept: any) => ({
                     value: dept.name,
@@ -767,19 +801,20 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
             {users.length > 0 && (
               <div className="ml-3">
                 {users.map((user, index) => (
-                  <div key={index} className="grid grid-cols-6 gap-2 p-2 border-b border-buttonBorder last:border-b-0">
+                  <div key={index} className="grid grid-cols-7 gap-2 p-2 border-b border-buttonBorder last:border-b-0">
                     <div>{user.name}</div>
                     <div>{user.email}</div>
+                    <div>{user.password ? '••••••••' : '-'}</div>
                     <div>{user.phone || '-'}</div>
-                    <div>{user.department ? user.department.name : '-'}</div>
+                    <div>{user.department?.name || '-'}</div>
                     <div>
-                      {user.exceptions?.email && <span className="mr-1">Email</span>}
+                      {user.exceptions?.email && <span className="mr-2">Email</span>}
                       {user.exceptions?.sms && <span>SMS</span>}
                       {!user.exceptions?.email && !user.exceptions?.sms && '-'}
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex justify-between">
                       <div>
-                        {user.access?.billing && <span className="mr-1">Billing</span>}
+                        {user.access?.billing && <span className="mr-2">Billing</span>}
                         {user.access?.admin && <span>Admin</span>}
                         {!user.access?.billing && !user.access?.admin && '-'}
                       </div>
