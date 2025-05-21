@@ -47,11 +47,32 @@ export const workflowService = {
   /**
    * Get workflows by client ID
    * @param {string} clientId - Client ID
-   * @returns {Promise<Array>} Array of workflow documents
+   * @returns {Promise<Array>} Array of workflow documents with populated department info
    */
   async getWorkflowsByClientId(clientId: string) {
     await dbConnect();
-    return Workflow.find({ clientId }).lean();
+    
+    // Find all workflows for this client and populate the department reference
+    return Workflow.find({ clientId })
+      .populate({
+        path: 'departmentId',
+        select: 'name', // Only select the name field from the department
+        model: 'Department'
+      })
+      .lean()
+      .then(workflows => {
+        // Transform the populated departmentId into a department property for the UI
+        return workflows.map(workflow => {
+          const result: any = { ...workflow };
+          
+          // If departmentId is populated, extract the name as department
+          if (workflow.departmentId && typeof workflow.departmentId === 'object' && 'name' in workflow.departmentId) {
+            result.department = workflow.departmentId.name;
+          }
+          
+          return result;
+        });
+      });
   },
 
   /**

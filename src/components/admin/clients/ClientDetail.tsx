@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import AssignedSupportEngineers from '@/components/admin/clients/detail/AssignedSupportEngineers';
-import ClientUsers from '@/components/admin/clients/detail/ClientUsers';
-import DocumentLinks from '@/components/admin/clients/detail/DocumentLinks';
-import PipelineProgress from '@/components/admin/clients/detail/PipelineProgress';
+import AssignedSupportEngineers from './detail/AssignedSupportEngineers';
+import ClientUsers from './detail/ClientUsers';
+import DocumentLinks from './detail/DocumentLinks';
+import PipelineProgress from './detail/PipelineProgress';
+import ClientWorkflows from './detail/ClientWorkflows';
 
 interface ClientDetailProps {
   clientId: string;
@@ -104,10 +105,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ clientId }) => {
           <PipelineProgress clientId={clientId} />
         </>
       ) : (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium mb-4">Client Workflows</h3>
-          <p className="text-textSecondary">Client workflow management coming soon.</p>
-        </div>
+        <ClientWorkflows clientId={clientId} />
       )}
     </div>
   );

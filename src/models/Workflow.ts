@@ -9,13 +9,14 @@ export interface IWorkflow extends Document {
   clientId: mongoose.Types.ObjectId;
   departmentId?: mongoose.Types.ObjectId;
   name: string;
-  description?: string;
   status: 'ACTIVE' | 'INACTIVE';
   numberOfNodes: number;
   numberOfExecutions: number;
   numberOfExceptions: number;
   timeSavedPerExecution?: number;
+  totalTimeSaved?: number;
   moneySavedPerExecution?: number;
+  totalMoneySaved?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,18 +30,14 @@ const workflowSchema = new Schema<IWorkflow>({
   departmentId: {
     type: Schema.Types.ObjectId,
     ref: 'Department',
-    required: false // A workflow might not always be tied to a specific department
+    required: false // Department is optional
   },
   name: {
     type: String,
     required: true,
     trim: true
   },
-  description: {
-    type: String,
-    trim: true,
-    required: false
-  },
+
   status: {
     type: String,
     enum: ['ACTIVE', 'INACTIVE'],
@@ -62,7 +59,15 @@ const workflowSchema = new Schema<IWorkflow>({
     type: Number,
     required: false
   },
+  totalTimeSaved: { // numberOfExecutions * timeSavedPerExecution
+    type: Number,
+    required: false
+  },
   moneySavedPerExecution: { // Admin input, based on an hourly rate or other metric
+    type: Number,
+    required: false
+  },
+  totalMoneySaved: { // numberOfExecutions * moneySavedPerExecution
     type: Number,
     required: false
   }
