@@ -220,20 +220,15 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
 
           {/* Setup Fee */}
           <div className="col-span-2 sm:col-span-1">
-            <div className="relative">
-              <TextInput
-                id="setupFee"
-                label="Setup Fee"
-                value={formData.setupFee.toString()}
-                onChange={handleChange}
-                type="number"
-                error={errors.setupFee}
-                className="pl-6"
-              />
-              <div className="absolute bottom-[9px] left-3 pointer-events-none">
-                <span className="text-gray-500">$</span>
-              </div>
-            </div>
+            <TextInput
+              id="setupFee"
+              label="Setup Fee"
+              value={formData.setupFee.toString()}
+              onChange={handleChange}
+              type="number"
+              error={errors.setupFee}
+              leftIcon={<span className="text-gray-500">$</span>}
+            />
           </div>
 
           {/* Billing Cadence */}
@@ -255,56 +250,41 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
 
           {/* Prepayment Percentage */}
           <div className="col-span-2 sm:col-span-1">
-            <div className="relative">
-              <TextInput
-                id="prepaymentPercentage"
-                label="Prepayment Percentage"
-                value={formData.prepaymentPercentage.toString()}
-                onChange={handleChange}
-                type="number"
-                error={errors.prepaymentPercentage}
-                className="pr-6"
-              />
-              <div className="absolute bottom-[9px] right-3 pointer-events-none">
-                <span className="text-gray-500">%</span>
-              </div>
-            </div>
+            <TextInput
+              id="prepaymentPercentage"
+              label="Prepayment Percentage"
+              value={formData.prepaymentPercentage.toString()}
+              onChange={handleChange}
+              type="number"
+              error={errors.prepaymentPercentage}
+              rightIcon={<span className="text-gray-500">%</span>}
+            />
           </div>
 
           {/* Cap */}
           <div className="col-span-2 sm:col-span-1">
-            <div className="relative">
-              <TextInput
-                id="cap"
-                label="Cap"
-                value={formData.cap.toString()}
-                onChange={handleChange}
-                type="number"
-                error={errors.cap}
-                className="pl-6"
-              />
-              <div className="absolute bottom-[9px] left-3 pointer-events-none">
-                <span className="text-gray-500">$</span>
-              </div>
-            </div>
+            <TextInput
+              id="cap"
+              label="Cap"
+              value={formData.cap.toString()}
+              onChange={handleChange}
+              type="number"
+              error={errors.cap}
+              leftIcon={<span className="text-gray-500">$</span>}
+            />
           </div>
 
           {/* Overage Cost */}
           <div className="col-span-2 sm:col-span-1">
-            <div className="relative">
-              <TextInput
-                id="overageCost"
-                label="Overage Cost ($/hr)"
-                value={formData.overageCost.toString()}
-                onChange={handleChange}
-                type="number"
-                error={errors.overageCost}
-                className="pl-6"
-              />
-              <div className="absolute bottom-[9px] left-3 pointer-events-none">
-                <span className="text-gray-500">$</span>
-              </div>
-            </div>
+            <TextInput
+              id="overageCost"
+              label="Overage Cost ($/hr)"
+              value={formData.overageCost.toString()}
+              onChange={handleChange}
+              type="number"
+              error={errors.overageCost}
+              leftIcon={<span className="text-gray-500">$</span>}
+            />
           </div>
         </div>
 
