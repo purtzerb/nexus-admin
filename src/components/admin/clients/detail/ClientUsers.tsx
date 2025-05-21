@@ -23,13 +23,27 @@ const ClientUsers: React.FC<ClientUsersProps> = ({ clientId }) => {
   const { data: users, isLoading, isError } = useQuery({
     queryKey: ['client-users', clientId],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/clients/${clientId}/users`);
+      // Fetch users directly from the users API with a filter for this client
+      const response = await fetch(`/api/admin/users?clientId=${clientId}&role=CLIENT_USER`);
       if (!response.ok) {
         throw new Error('Failed to fetch client users');
       }
       const data = await response.json();
-      return data.users || [];
-    }
+      
+      // Map the user data to the format expected by this component
+      return (data.users || []).map((user: any) => ({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        isPrimaryContact: user.isPrimaryContact,
+        hasBillingAccess: user.hasBillingAccess,
+        isClientAdmin: user.isClientAdmin,
+        role: user.role
+      }));
+    },
+    // Refetch when the component mounts or when the client ID changes
+    refetchOnMount: true
   });
 
   if (isLoading) {

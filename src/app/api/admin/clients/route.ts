@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientService from '@/lib/db/clientService';
-import userService from '@/lib/db/userService';
+import { clientService } from '@/lib/db/clientService';
+import { userService } from '@/lib/db/userService';
 import dbConnect from '@/lib/db/db';
+import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import { IPipelineStep, IDocumentLink } from '@/models/Client';
 import mongoose from 'mongoose';
-import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
 /**
  * GET /api/admin/clients
@@ -116,22 +116,22 @@ export async function POST(request: NextRequest) {
       session.startTransaction();
 
       // Initialize the pipeline steps with default values
-      const defaultPipelineSteps: IPipelineStep[] = [
-        { name: 'Discovery: Initial Survey', status: 'pending' as const, order: 1 },
-        { name: 'Discovery: Process Deep Dive', status: 'pending' as const, order: 2 },
-        { name: 'ADA Proposal Sent', status: 'pending' as const, order: 3 },
-        { name: 'ADA Proposal Review', status: 'pending' as const, order: 4 },
-        { name: 'ADA Contract Sent', status: 'pending' as const, order: 5 },
-        { name: 'ADA Contract Signed', status: 'pending' as const, order: 6 },
-        { name: 'Credentials Collected', status: 'pending' as const, order: 7 },
-        { name: 'Factory Build Initiated', status: 'pending' as const, order: 8 },
-        { name: 'Test Plan Generated', status: 'pending' as const, order: 9 },
-        { name: 'Testing Started', status: 'pending' as const, order: 10 },
-        { name: 'Production Deploy', status: 'pending' as const, order: 11 }
+      const pipelineSteps: IPipelineStep[] = [
+        { name: 'Discovery: Initial Survey', status: 'pending', order: 1 },
+        { name: 'Discovery: Process Deep Dive', status: 'pending', order: 2 },
+        { name: 'ADA Proposal Sent', status: 'pending', order: 3 },
+        { name: 'ADA Proposal Review', status: 'pending', order: 4 },
+        { name: 'ADA Contract Sent', status: 'pending', order: 5 },
+        { name: 'ADA Contract Signed', status: 'pending', order: 6 },
+        { name: 'Credentials Collected', status: 'pending', order: 7 },
+        { name: 'Factory Build Initiated', status: 'pending', order: 8 },
+        { name: 'Test Plan Generated', status: 'pending', order: 9 },
+        { name: 'Testing Started', status: 'pending', order: 10 },
+        { name: 'Production Deploy', status: 'pending', order: 11 }
       ];
 
       // Initialize document links with empty URLs
-      const defaultDocumentLinks: IDocumentLink[] = [
+      const documentLinks: IDocumentLink[] = [
         { title: 'Survey Questions', url: '', type: 'survey_questions' },
         { title: 'Survey Results', url: '', type: 'survey_results' },
         { title: 'Process Documentation', url: '', type: 'process_documentation' },
@@ -142,25 +142,28 @@ export async function POST(request: NextRequest) {
       ];
 
       // Set the current phase to the first step
-      const pipelineProgressCurrentPhase = 'Discovery: Initial Survey';
+      const currentPhase = 'Discovery: Initial Survey';
 
-      // Create the client with pipeline steps and document links
+      // First create the client without users
       const clientData = {
         companyName,
         companyUrl,
         contactName,
         industry,
         status: 'PENDING' as const,
-        users,
+        users: [], // Initialize with empty users array
         assignedSolutionsEngineerIds,
-        pipelineSteps: defaultPipelineSteps,
-        documentLinks: defaultDocumentLinks,
-        pipelineProgressCurrentPhase
+        pipelineSteps,
+        documentLinks,
+        pipelineProgressCurrentPhase: currentPhase
       };
 
       // Create the client
       newClient = await clientService.createClient(clientData);
       const clientId = newClient._id;
+
+      // Array to store created user IDs
+      const createdUserIds: mongoose.Types.ObjectId[] = [];
 
       // Create CLIENT_USER users if provided
       if (users && users.length > 0) {
@@ -199,11 +202,23 @@ export async function POST(request: NextRequest) {
             }
 
             // Create user with CLIENT_USER role
-            await userService.createUser(userCreateData);
-          } catch (userError) {
-            console.error(`Error creating user ${userData.name}:`, userError);
+            const newUser = await userService.createUser(userCreateData);
+            console.log(`Created new user: ${newUser.name} (${newUser._id})`);
+
+            // Add user ID to the array
+            createdUserIds.push(newUser._id);
+          } catch (error) {
+            console.error(`Error creating user: ${userData.email}`, error);
             // Continue with other users even if one fails
           }
+        }
+
+        // Update the client with the created user IDs
+        if (createdUserIds.length > 0) {
+          console.log(`Updating client ${clientId} with ${createdUserIds.length} user IDs`);
+          await clientService.updateClient(clientId, {
+            users: createdUserIds
+          });
         }
       }
 
@@ -327,3 +342,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
   }
 }
+

@@ -111,6 +111,22 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     enabled: isOpen,
   });
 
+  // Fetch client users when editing
+  const fetchClientUsers = async (clientId: string) => {
+    try {
+      const response = await fetch(`/api/admin/users?clientId=${clientId}&role=CLIENT_USER`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch client users');
+      }
+      const data = await response.json();
+      console.log('Fetched client users:', data.users);
+      return data.users || [];
+    } catch (error) {
+      console.error('Error fetching client users:', error);
+      return [];
+    }
+  };
+
   // Reset form when modal is opened/closed or populate with client data when editing
   useEffect(() => {
     if (!isOpen) {
@@ -126,8 +142,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
       setCompanyName(client.companyName || '');
       setCompanyUrl(client.companyUrl || '');
       
-      // Set users if they exist
+      // Set users if they exist in the client data
       if (client.users && Array.isArray(client.users)) {
+        console.log('Setting users from client data:', client.users);
         const formattedUsers = client.users.map((user: any) => ({
           _id: user._id || undefined, // Preserve existing user ID for updates
           name: user.name || '',
@@ -147,6 +164,36 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           }
         }));
         setUsers(formattedUsers);
+      } else {
+        console.log('No users found in client data, fetching from API...');
+        // Fallback to fetching users from the API if they're not included in the client data
+        const loadClientUsers = async () => {
+          const clientUsers = await fetchClientUsers(client._id);
+          
+          if (clientUsers.length > 0) {
+            const formattedUsers = clientUsers.map((user: any) => ({
+              _id: user._id || undefined,
+              name: user.name || '',
+              email: user.email || '',
+              phone: user.phone || '',
+              department: user.departmentId ? {
+                id: user.departmentId,
+                name: '' // We'll need to look up the department name if needed
+              } : undefined,
+              exceptions: {
+                email: user.notifyByEmailForExceptions || false,
+                sms: user.notifyBySmsForExceptions || false
+              },
+              access: {
+                billing: user.hasBillingAccess || false,
+                admin: user.isClientAdmin || false
+              }
+            }));
+            setUsers(formattedUsers);
+          }
+        };
+        
+        loadClientUsers();
       }
       
       // Set departments if they exist in the client data

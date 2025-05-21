@@ -11,10 +11,7 @@ import mongoose from 'mongoose';
  * Get a specific client by ID
  * Only accessible by admins and solutions engineers
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await dbConnect();
     
@@ -31,6 +28,9 @@ export async function GET(
     }
     
     const clientId = params.id;
+    console.log(`Fetching client with ID: ${clientId}`);
+    
+    // Get the client data
     const client = await clientService.getClientById(clientId);
     
     if (!client) {
@@ -48,7 +48,31 @@ export async function GET(
       }
     }
     
-    return NextResponse.json({ client });
+    // Fetch client users from the User collection
+    const clientUsers = await userService.getClientUsers(clientId);
+    console.log(`Found ${clientUsers.length} users for client ${clientId}`);
+    
+    // Add users to the client object
+    const clientWithUsers = {
+      ...client,
+      users: clientUsers.map(user => ({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        department: user.departmentId,
+        exceptions: {
+          email: user.notifyByEmailForExceptions || false,
+          sms: user.notifyBySmsForExceptions || false
+        },
+        access: {
+          billing: user.hasBillingAccess || false,
+          admin: user.isClientAdmin || false
+        }
+      }))
+    };
+    
+    return NextResponse.json({ client: clientWithUsers });
   } catch (error) {
     console.error('Error fetching client:', error);
     return NextResponse.json({ error: 'Failed to fetch client' }, { status: 500 });
@@ -97,13 +121,13 @@ export async function PUT(
     // Extract users and solution engineers from the request data
     const { users, assignedSolutionsEngineerIds, ...clientUpdateData } = data;
     
-    // Update basic client information
+    // First, update basic client information without touching users
     const updateData = {
       ...clientUpdateData,
       updatedAt: new Date()
     };
     
-    // Update the client
+    // Update the client with basic information
     const updatedClient = await clientService.updateClient(clientId, updateData);
     
     // Handle users management
@@ -112,20 +136,38 @@ export async function PUT(
       const existingUsers = await userService.getClientUsers(clientId);
       const existingUserIds = existingUsers.map(u => u._id.toString());
       
+      console.log(`Found ${existingUsers.length} existing users for client ${clientId}:`, 
+        existingUsers.map(u => ({ id: u._id.toString(), email: u.email })));
+      
+      // Array to store all user IDs (existing and new)
+      const updatedUserIds: mongoose.Types.ObjectId[] = [];
+      
       // Process each user in the request
       for (const userData of users) {
+        // Convert department to departmentId for proper reference
+        const departmentId = userData.department?.id || userData.department;
+        
+        // Prepare user data with proper field names
+        const userUpdateData = {
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          role: 'CLIENT_USER' as const, // Use const assertion to fix TypeScript error
+          clientId: new mongoose.Types.ObjectId(clientId), // Convert string to ObjectId
+          departmentId: departmentId ? new mongoose.Types.ObjectId(departmentId) : undefined, // Convert to ObjectId if present
+          notifyByEmailForExceptions: userData.exceptions?.email || false,
+          notifyBySmsForExceptions: userData.exceptions?.sms || false,
+          hasBillingAccess: userData.access?.billing || false,
+          isClientAdmin: userData.access?.admin || false
+        };
+        
         if (userData._id) {
           // Update existing user
-          console.log(`Updating existing user: ${userData.email}`);
-          await userService.updateUser(userData._id, {
-            name: userData.name,
-            email: userData.email,
-            phone: userData.phone,
-            departmentId: userData.department, // Use departmentId instead of department
-            // Handle exceptions and access separately to avoid type errors
-            ...(userData.exceptions ? { 'exceptions.email': userData.exceptions.email, 'exceptions.sms': userData.exceptions.sms } : {}),
-            ...(userData.access ? { 'access.billing': userData.access.billing, 'access.admin': userData.access.admin } : {})
-          });
+          console.log(`Updating existing user: ${userData.email} (${userData._id})`);
+          await userService.updateUser(userData._id, userUpdateData);
+          
+          // Add to updatedUserIds
+          updatedUserIds.push(new mongoose.Types.ObjectId(userData._id));
           
           // Remove from existingUserIds to track which ones need to be deleted
           const index = existingUserIds.indexOf(userData._id.toString());
@@ -135,11 +177,10 @@ export async function PUT(
         } else {
           // Create new user
           console.log(`Creating new user: ${userData.email}`);
-          await userService.createUser({
-            ...userData,
-            role: 'CLIENT_USER',
-            clientId: clientId
-          });
+          const newUser = await userService.createUser(userUpdateData);
+          
+          // Add to updatedUserIds
+          updatedUserIds.push(newUser._id);
         }
       }
       
@@ -148,6 +189,12 @@ export async function PUT(
         console.log(`Deleting user: ${userId}`);
         await userService.deleteUser(userId);
       }
+      
+      // Update the client with the final list of user IDs
+      console.log(`Updating client ${clientId} with ${updatedUserIds.length} user IDs`);
+      await clientService.updateClient(clientId, {
+        users: updatedUserIds
+      });
     }
     
     // Handle solutions engineers assignment

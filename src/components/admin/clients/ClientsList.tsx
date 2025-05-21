@@ -85,6 +85,7 @@ const ClientsList: React.FC = () => {
   };
 
   const handleClientClick = (clientId: string) => {
+    console.log('Navigating to client:', clientId);
     router.push(`/admin/clients/${clientId}`);
   };
 
@@ -150,7 +151,11 @@ const ClientsList: React.FC = () => {
                   onClick={(e) => {
                     // Don't navigate if clicking on action buttons
                     if ((e.target as HTMLElement).closest('button')) return;
-                    handleClientClick(client._id);
+                    
+                    // Ensure we have a string ID
+                    const clientId = String(client._id);
+                    console.log('Client clicked:', client.companyName, 'ID:', clientId);
+                    handleClientClick(clientId);
                   }}
                   className="cursor-pointer hover:bg-darkerBackground transition-colors duration-150"
                 >

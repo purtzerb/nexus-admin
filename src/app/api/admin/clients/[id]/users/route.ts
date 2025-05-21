@@ -50,8 +50,15 @@ export async function GET(
       }
     }
     
+    // Log the client ID we're fetching users for
+    console.log(`Fetching users for client ID: ${clientId}`);
+    
     // Get all users associated with this client
     const clientUsers = await userService.getClientUsers(clientId);
+    
+    // Log the users found
+    console.log(`Found ${clientUsers.length} users for client ID ${clientId}:`, 
+      clientUsers.map(u => ({ id: u._id.toString(), name: u.name, email: u.email, clientId: u.clientId?.toString() })));
     
     // Format the response
     const users = clientUsers.map(user => ({

@@ -37,15 +37,10 @@ export interface IDocumentLink {
   url: string;
   type: string;
 }
-
 export interface IClient extends Document {
-  _id: mongoose.Types.ObjectId;
   companyName: string;
   companyUrl?: string;
   contractStartDate?: Date;
-  contactName?: string;
-  phone?: string;
-  email?: string;
   assignedSolutionsEngineerIds?: mongoose.Types.ObjectId[];
   pipelineProgressCurrentPhase?: string;
   pipelineSteps?: IPipelineStep[];
@@ -54,52 +49,10 @@ export interface IClient extends Document {
   users?: IClientUser[];
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   industry?: string;
+  contactName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
-
-// Define schemas for nested documents
-const clientUserSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  email: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true
-  },
-  phone: {
-    type: String,
-    trim: true
-  },
-  department: {
-    type: String,
-    trim: true
-  },
-  exceptions: {
-    email: {
-      type: Boolean,
-      default: false
-    },
-    sms: {
-      type: Boolean,
-      default: false
-    }
-  },
-  access: {
-    billing: {
-      type: Boolean,
-      default: false
-    },
-    admin: {
-      type: Boolean,
-      default: false
-    }
-  }
-});
 
 const pipelineStepSchema = new Schema({
   name: {
@@ -178,7 +131,11 @@ const clientSchema = new Schema<IClient>({
     ref: 'ClientSubscription',
     required: false
   },
-  users: [clientUserSchema],
+  users: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  }],
   status: {
     type: String,
     enum: ['ACTIVE', 'INACTIVE', 'PENDING'],

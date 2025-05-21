@@ -29,10 +29,31 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : undefined;
+    const role = searchParams.get('role');
+    const clientId = searchParams.get('clientId');
     
-    // Get admin users
+    // Build filter based on query parameters
+    let filter: Record<string, any> = {};
+    
+    // Filter by role if provided
+    if (role) {
+      filter.role = role;
+    } else {
+      // Default to ADMIN if no role specified
+      filter.role = 'ADMIN';
+    }
+    
+    // Filter by clientId if provided
+    if (clientId) {
+      filter.clientId = clientId;
+      console.log(`Filtering users by clientId: ${clientId}`);
+    }
+    
+    console.log('User filter:', filter);
+    
+    // Get users based on filter
     const users = await userService.getUsers(
-      { role: 'ADMIN' },
+      filter,
       { limit, skip, sort: { name: 1 as 1 } }
     );
     
