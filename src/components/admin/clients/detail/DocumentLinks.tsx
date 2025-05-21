@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { TextInput } from '@/components/shared/inputs';
+import { showToast } from '@/lib/toast/toastUtils';
 
 interface DocumentLink {
   _id: string;
@@ -18,8 +20,9 @@ interface DocumentLinksProps {
 const DocumentLinks: React.FC<DocumentLinksProps> = ({ clientId }) => {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [editingDoc, setEditingDoc] = useState<string | null>(null);
-  const [urlInput, setUrlInput] = useState('');
+  const [documentLinks, setDocumentLinks] = useState<Record<string, string>>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalLinks, setOriginalLinks] = useState<Record<string, string>>({});
   
   // Fetch document links
   const { data: documents, isLoading, isError } = useQuery({
@@ -34,50 +37,71 @@ const DocumentLinks: React.FC<DocumentLinksProps> = ({ clientId }) => {
     }
   });
   
-  // Mutation to update document link
-  const updateDocumentLink = useMutation({
-    mutationFn: async ({ type, url }: { type: string; url: string }) => {
-      const response = await fetch(`/api/admin/clients/${clientId}/documents`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ type, url })
+  // Initialize document links state when data is loaded
+  useEffect(() => {
+    if (documents && documents.length > 0) {
+      const links: Record<string, string> = {};
+      documents.forEach((doc: DocumentLink) => {
+        links[doc.type] = doc.url || '';
+      });
+      setDocumentLinks(links);
+      setOriginalLinks(links);
+    }
+  }, [documents]);
+  
+  // Mutation to update document links
+  const updateDocumentLinks = useMutation({
+    mutationFn: async (links: Record<string, string>) => {
+      // Create an array of promises for each document link update
+      const updatePromises = Object.entries(links).map(([type, url]) => {
+        return fetch(`/api/admin/clients/${clientId}/documents`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ type, url })
+        }).then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to update ${type} document link`);
+          }
+          return response.json();
+        });
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to update document link');
-      }
-      
-      return response.json();
+      // Wait for all updates to complete
+      return Promise.all(updatePromises);
     },
     onSuccess: () => {
       // Invalidate and refetch the client and document data
       queryClient.invalidateQueries({ queryKey: ['client', clientId] });
       queryClient.invalidateQueries({ queryKey: ['client-documents', clientId] });
-      setEditingDoc(null);
-      setUrlInput('');
+      setIsEditing(false);
+      setOriginalLinks({...documentLinks});
+      showToast('Document links updated successfully', 'success');
     },
     onError: (error) => {
-      console.error('Error updating document link:', error);
+      console.error('Error updating document links:', error);
+      showToast('Failed to update document links', 'error');
     }
   });
   
-  // Function to handle starting edit mode
-  const handleStartEdit = (doc: DocumentLink) => {
-    setEditingDoc(doc.type);
-    setUrlInput(doc.url);
+  // Function to handle input changes
+  const handleInputChange = (type: string, value: string) => {
+    setDocumentLinks(prev => ({
+      ...prev,
+      [type]: value
+    }));
   };
   
-  // Function to handle saving the edited URL
-  const handleSaveUrl = (type: string) => {
-    updateDocumentLink.mutate({ type, url: urlInput });
+  // Function to handle saving all document links
+  const handleSaveAll = () => {
+    updateDocumentLinks.mutate(documentLinks);
   };
   
-  // Function to handle canceling edit mode
-  const handleCancelEdit = () => {
-    setEditingDoc(null);
-    setUrlInput('');
+  // Function to handle canceling all edits
+  const handleCancelAll = () => {
+    setDocumentLinks({...originalLinks});
+    setIsEditing(false);
   };
 
   if (isLoading) {
@@ -113,76 +137,53 @@ const DocumentLinks: React.FC<DocumentLinksProps> = ({ clientId }) => {
         <h3 className="text-lg font-medium">Document Links</h3>
       </div>
       <div className="p-4">
-        {updateDocumentLink.isPending && (
+        {updateDocumentLinks.isPending && (
           <div className="mb-4 p-2 bg-darkerBackground rounded text-textSecondary text-sm">
-            Updating document link...
+            Updating document links...
           </div>
         )}
-        <ul className="space-y-4">
-          {documents.map((doc: DocumentLink) => (
-            <li key={doc._id} className="border-b border-buttonBorder pb-3 last:border-0 last:pb-0">
-              <div className="flex justify-between items-center mb-1">
-                <div className="text-sm font-medium text-textSecondary">{doc.title}</div>
-                {(isAdmin || doc.type === editingDoc) && (
-                  <div>
-                    {editingDoc === doc.type ? (
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => handleSaveUrl(doc.type)}
-                          disabled={updateDocumentLink.isPending}
-                          className="text-xs bg-success text-textLight px-2 py-1 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-                        >
-                          Save
-                        </button>
-                        <button 
-                          onClick={handleCancelEdit}
-                          disabled={updateDocumentLink.isPending}
-                          className="text-xs bg-error text-textLight px-2 py-1 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => handleStartEdit(doc)}
-                        className="text-xs bg-buttonPrimary text-textLight px-2 py-1 rounded hover:opacity-90 transition-opacity"
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </div>
-                )}
+        
+        {documents && documents.length > 0 ? (
+          <div className="space-y-4">
+            {documents.map((doc: DocumentLink) => (
+              <div key={doc._id} className="border-b border-buttonBorder pb-4 last:border-0 last:pb-0">
+                <TextInput
+                  id={`doc-${doc.type}`}
+                  label={doc.title}
+                  value={documentLinks[doc.type] || ''}
+                  onChange={(e) => {
+                    handleInputChange(doc.type, e.target.value);
+                    if (!isEditing) setIsEditing(true);
+                  }}
+                  placeholder="Enter document URL"
+                  type="url"
+                  className="mb-2"
+                />
               </div>
-              
-              {editingDoc === doc.type ? (
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    className="w-full p-2 border border-buttonBorder rounded text-sm"
-                    placeholder="Enter document URL"
-                  />
-                </div>
-              ) : (
-                <div>
-                  {doc.url ? (
-                    <a 
-                      href={doc.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm text-buttonPrimary hover:underline break-all"
-                    >
-                      {doc.url}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-textSecondary italic">No URL provided</span>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+            ))}
+            
+            {isEditing && (
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={handleCancelAll}
+                  disabled={updateDocumentLinks.isPending}
+                  className="px-4 py-2 border border-buttonBorder rounded hover:bg-background transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={updateDocumentLinks.isPending}
+                  className="px-4 py-2 bg-buttonPrimary text-textLight rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  Save
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-textSecondary">No documents found for this client</div>
+        )}
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ClientDetailPage({ params }: { params: { id: string } }) {
   return (
-    <div className="h-full bg-darkerBackground">
+    <div className="h-fit bg-darkerBackground">
       <PageHeader pageTitle="Client Manager" />
       <div className="p-6 space-y-6">
         <ClientDetail clientId={params.id} />
