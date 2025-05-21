@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import mongoose from 'mongoose';
 import SubscriptionPlan, { ISubscriptionPlan } from '@/models/SubscriptionPlan';
+import ClientModel from '@/models/Client';
 
 // Helper functions to map frontend values to database enum values
 function mapPricingModel(model: string): 'CONSUMPTION' | 'FIXED' | 'TIERED_USAGE' | 'PER_SEAT' {
@@ -24,6 +25,9 @@ function mapBillingCadence(cadence: string): 'MONTHLY' | 'QUARTERLY' | 'YEARLY' 
   return cadenceMap[cadence] || 'MONTHLY';
 }
 
+/**
+ * Get a single subscription plan by ID
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -53,7 +57,7 @@ export async function GET(
       );
     }
 
-    // Find the subscription
+    // Find the subscription using the Mongoose model
     const subscription = await SubscriptionPlan.findById(id).lean();
 
     if (!subscription) {
@@ -63,9 +67,8 @@ export async function GET(
       );
     }
 
-    // Count clients using this subscription
-    const Client = mongoose.connection.collection('clients');
-    const clientCount = await Client.countDocuments({
+    // Count clients using this subscription using the proper Mongoose model
+    const clientCount = await ClientModel.countDocuments({
       subscriptionId: id
     });
 
@@ -84,6 +87,9 @@ export async function GET(
   }
 }
 
+/**
+ * Update a subscription plan
+ */
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -114,19 +120,8 @@ export async function PUT(
       );
     }
 
-    // Validate required fields
-    if (!data.name) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if the subscription exists
-    const Subscription = mongoose.connection.collection('subscriptions');
-    const existingSubscription = await Subscription.findOne({
-      _id: new mongoose.Types.ObjectId(id)
-    });
+    // Check if the subscription exists using the Mongoose model
+    const existingSubscription = await SubscriptionPlan.findById(id);
 
     if (!existingSubscription) {
       return NextResponse.json(
@@ -152,22 +147,24 @@ export async function PUT(
     const updatedSubscription = {
       name: data.name,
       pricingModel: mapPricingModel(data.pricingModel || 'Fixed'),
-      contractLengthMonths: data.contractLength || 12,
+      contractLengthMonths: data.contractLengthMonths || 12,
       billingCadence: mapBillingCadence(data.billingCadence || 'Monthly'),
       setupFee: data.setupFee || 0,
       prepaymentPercentage: data.prepaymentPercentage || 0,
-      capAmount: data.cap || 0,
+      capAmount: data.capAmount || 0,
       overageCost: data.overageCost || 0
     };
 
-    await SubscriptionPlan.findByIdAndUpdate(id, updatedSubscription, { new: true });
+    // Use the Mongoose model to update the subscription
+    const updated = await SubscriptionPlan.findByIdAndUpdate(
+      id, 
+      updatedSubscription, 
+      { new: true }
+    );
 
     return NextResponse.json({
       message: 'Subscription plan updated successfully',
-      subscription: {
-        ...updatedSubscription,
-        _id: id
-      }
+      subscription: updated
     });
   } catch (error) {
     console.error('Error updating subscription:', error);
@@ -178,6 +175,9 @@ export async function PUT(
   }
 }
 
+/**
+ * Delete a subscription plan
+ */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -207,11 +207,8 @@ export async function DELETE(
       );
     }
 
-    // Check if the subscription exists
-    const Subscription = mongoose.connection.collection('subscriptions');
-    const existingSubscription = await Subscription.findOne({
-      _id: new mongoose.Types.ObjectId(id)
-    });
+    // Check if the subscription exists using the Mongoose model
+    const existingSubscription = await SubscriptionPlan.findById(id);
 
     if (!existingSubscription) {
       return NextResponse.json(
@@ -220,9 +217,8 @@ export async function DELETE(
       );
     }
 
-    // Check if any clients are using this subscription
-    const Client = mongoose.connection.collection('clients');
-    const clientsUsingSubscription = await Client.countDocuments({
+    // Check if any clients are using this subscription using the proper Mongoose model
+    const clientsUsingSubscription = await ClientModel.countDocuments({
       subscriptionId: id
     });
 
@@ -232,7 +228,7 @@ export async function DELETE(
       console.warn(`Deleting subscription ${id} that is used by ${clientsUsingSubscription} clients`);
     }
 
-    // Delete the subscription
+    // Delete the subscription using the Mongoose model
     await SubscriptionPlan.findByIdAndDelete(id);
 
     return NextResponse.json({

@@ -3,19 +3,9 @@
 import React, { useState } from 'react';
 import { showToast } from '@/lib/toast/toastUtils';
 import Modal from '@/components/ui/Modal';
+import { Subscription } from '@/types/subscription';
 
-interface Subscription {
-  _id: string;
-  name: string;
-  pricingModel: 'Fixed' | 'Tiered' | 'Usage';
-  contractLength: number;
-  billingCadence: 'Monthly' | 'Quarterly' | 'Annually';
-  setupFee: number;
-  prepaymentPercentage: number;
-  cap: number;
-  overageCost: number;
-  clientCount?: number;
-}
+// Using the shared Subscription interface from @/types/subscription
 
 interface DeleteSubscriptionModalProps {
   isOpen: boolean;

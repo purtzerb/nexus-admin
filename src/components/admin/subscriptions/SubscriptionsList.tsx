@@ -6,19 +6,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { showToast } from '@/lib/toast/toastUtils';
 import AddSubscriptionModal from '@/components/admin/subscriptions/AddSubscriptionModal';
 import DeleteSubscriptionModal from '@/components/admin/subscriptions/DeleteSubscriptionModal';
+import { Subscription } from '@/types/subscription';
 
-interface Subscription {
-  _id: string;
-  name: string;
-  pricingModel: 'Fixed' | 'Tiered' | 'Usage';
-  contractLength: number; // in months
-  billingCadence: 'Monthly' | 'Quarterly' | 'Annually';
-  setupFee: number;
-  prepaymentPercentage: number;
-  cap: number;
-  overageCost: number;
-  clientCount: number;
-}
+// Using the shared Subscription interface from @/types/subscription
 
 const fetchSubscriptions = async (): Promise<Subscription[]> => {
   const response = await fetch('/api/admin/subscriptions');
@@ -81,7 +71,10 @@ const SubscriptionsList: React.FC = () => {
   }
 
   // Format currency values
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '$0';
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -156,7 +149,7 @@ const SubscriptionsList: React.FC = () => {
                     <div className="text-sm text-textPrimary">{subscription.pricingModel}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-textPrimary">{subscription.contractLength} months</div>
+                    <div className="text-sm text-textPrimary">{subscription.contractLengthMonths || 0} months</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-textPrimary">{subscription.billingCadence}</div>
@@ -168,7 +161,7 @@ const SubscriptionsList: React.FC = () => {
                     <div className="text-sm text-textPrimary">{subscription.prepaymentPercentage}%</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-textPrimary">{formatCurrency(subscription.cap)}</div>
+                    <div className="text-sm text-textPrimary">{formatCurrency(subscription.capAmount)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-textPrimary">${subscription.overageCost}/hr</div>

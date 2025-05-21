@@ -23,14 +23,14 @@ export async function GET(
     await dbConnect();
     const nextAuthSession = await getServerSession(authOptions);
     const session = adaptSession(nextAuthSession);
-    const { clientId } = params;
-    
+    const { clientId } = await params;
+
     // Check if client exists
     const exists = await clientExists(clientId);
     if (!exists) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
-    
+
     // Check if user has permission to access this client's users
     const hasPermission = await canManageClientUsers(session, clientId);
     if (!hasPermission) {
@@ -41,19 +41,19 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : undefined;
-    
+
     // Get client users
     const users = await userService.getUsers(
       { role: 'CLIENT_USER', clientId },
       { limit, skip, sort: { name: 1 } }
     );
-    
+
     // Remove sensitive information before sending to client
     const sanitizedUsers = users.map(user => {
       const { passwordHash, passwordSalt, ...userWithoutPassword } = user;
       return userWithoutPassword;
     });
-    
+
     return NextResponse.json({ users: sanitizedUsers });
   } catch (error) {
     console.error('Error fetching client users:', error);
@@ -77,49 +77,49 @@ export async function POST(
     await dbConnect();
     const nextAuthSession = await getServerSession(authOptions);
     const session = adaptSession(nextAuthSession);
-    const { clientId } = params;
-    
+    const { clientId } = await params;
+
     // Check if client exists
     const exists = await clientExists(clientId);
     if (!exists) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
-    
+
     // Check if user has permission to manage this client's users
     const hasPermission = await canManageClientUsers(session, clientId);
     if (!hasPermission) {
       return NextResponse.json({ error: 'Forbidden: You do not have permission to manage users for this client' }, { status: 403 });
     }
-    
+
     const data = await request.json();
-    const { 
-      name, 
-      email, 
-      password, 
-      phone, 
-      departmentId, 
-      notifyByEmailForExceptions, 
+    const {
+      name,
+      email,
+      password,
+      phone,
+      departmentId,
+      notifyByEmailForExceptions,
       notifyBySmsForExceptions,
       hasBillingAccess,
       isClientAdmin,
       clientUserNotes
     } = data;
-    
+
     // Validate required fields
     if (!name || !email || !password) {
       return NextResponse.json({ error: 'Missing required fields: name, email, and password are required' }, { status: 400 });
     }
-    
+
     // Check if user with email already exists
     const existingUser = await userService.getUserByEmail(email);
     if (existingUser) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
-    
+
     // Generate password hash and salt
     const passwordSalt = generatePasswordSalt();
     const passwordHash = await hashPassword(password, passwordSalt);
-    
+
     // Create client user
     const userData = {
       name,
@@ -136,12 +136,12 @@ export async function POST(
       isClientAdmin: isClientAdmin || false,
       clientUserNotes
     };
-    
+
     const newUser = await userService.createUser(userData);
-    
+
     // Remove sensitive information before sending to client
     const { passwordHash: _, passwordSalt: __, ...userWithoutPassword } = newUser.toObject();
-    
+
     return NextResponse.json({ user: userWithoutPassword }, { status: 201 });
   } catch (error) {
     console.error('Error creating client user:', error);

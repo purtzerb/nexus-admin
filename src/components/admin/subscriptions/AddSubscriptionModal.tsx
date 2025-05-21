@@ -5,18 +5,48 @@ import { showToast } from '@/lib/toast/toastUtils';
 import Modal from '@/components/ui/Modal';
 import { TextInput } from '@/components/shared/inputs';
 import SelectInput from '@/components/shared/inputs/SelectInput';
+import { Subscription } from '@/types/subscription';
 
-interface Subscription {
-  _id: string;
-  name: string;
-  pricingModel: 'Fixed' | 'Tiered' | 'Usage';
-  contractLength: number; // in months
-  billingCadence: 'Monthly' | 'Quarterly' | 'Annually';
-  setupFee: number;
-  prepaymentPercentage: number;
-  cap: number;
-  overageCost: number;
-  clientCount?: number;
+// Using the shared Subscription interface from @/types/subscription
+
+// Helper functions to map database enum values to frontend values
+function mapDbPricingModelToUi(model: string): 'Fixed' | 'Tiered' | 'Usage' | 'Per Seat' {
+  const modelMap: Record<string, 'Fixed' | 'Tiered' | 'Usage' | 'Per Seat'> = {
+    'FIXED': 'Fixed',
+    'TIERED_USAGE': 'Tiered',
+    'CONSUMPTION': 'Usage',
+    'PER_SEAT': 'Per Seat'
+  };
+  return modelMap[model] || 'Fixed';
+}
+
+function mapDbBillingCadenceToUi(cadence: string): 'Monthly' | 'Quarterly' | 'Annually' {
+  const cadenceMap: Record<string, 'Monthly' | 'Quarterly' | 'Annually'> = {
+    'MONTHLY': 'Monthly',
+    'QUARTERLY': 'Quarterly',
+    'YEARLY': 'Annually'
+  };
+  return cadenceMap[cadence] || 'Monthly';
+}
+
+// Helper functions to map frontend values to database enum values
+function mapUiPricingModelToDb(model: string): 'FIXED' | 'TIERED_USAGE' | 'CONSUMPTION' | 'PER_SEAT' {
+  const modelMap: Record<string, 'FIXED' | 'TIERED_USAGE' | 'CONSUMPTION' | 'PER_SEAT'> = {
+    'Fixed': 'FIXED',
+    'Tiered': 'TIERED_USAGE',
+    'Usage': 'CONSUMPTION',
+    'Per Seat': 'PER_SEAT'
+  };
+  return modelMap[model] || 'FIXED';
+}
+
+function mapUiBillingCadenceToDb(cadence: string): 'MONTHLY' | 'QUARTERLY' | 'YEARLY' {
+  const cadenceMap: Record<string, 'MONTHLY' | 'QUARTERLY' | 'YEARLY'> = {
+    'Monthly': 'MONTHLY',
+    'Quarterly': 'QUARTERLY',
+    'Annually': 'YEARLY'
+  };
+  return cadenceMap[cadence] || 'MONTHLY';
 }
 
 interface AddSubscriptionModalProps {
@@ -37,11 +67,11 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
   const [formData, setFormData] = useState<Omit<Subscription, '_id' | 'clientCount'>>({
     name: '',
     pricingModel: 'Fixed',
-    contractLength: 12,
+    contractLengthMonths: 12,
     billingCadence: 'Monthly',
     setupFee: 0,
     prepaymentPercentage: 0,
-    cap: 0,
+    capAmount: 0,
     overageCost: 0
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,12 +81,12 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
     if (subscription && mode === 'update') {
       setFormData({
         name: subscription.name,
-        pricingModel: subscription.pricingModel,
-        contractLength: subscription.contractLength,
-        billingCadence: subscription.billingCadence,
+        pricingModel: mapDbPricingModelToUi(subscription.pricingModel),
+        contractLengthMonths: subscription.contractLengthMonths,
+        billingCadence: mapDbBillingCadenceToUi(subscription.billingCadence),
         setupFee: subscription.setupFee,
         prepaymentPercentage: subscription.prepaymentPercentage,
-        cap: subscription.cap,
+        capAmount: subscription.capAmount,
         overageCost: subscription.overageCost
       });
     } else {
@@ -64,11 +94,11 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
       setFormData({
         name: '',
         pricingModel: 'Fixed',
-        contractLength: 12,
+        contractLengthMonths: 12,
         billingCadence: 'Monthly',
         setupFee: 0,
         prepaymentPercentage: 0,
-        cap: 0,
+        capAmount: 0,
         overageCost: 0
       });
     }
@@ -90,8 +120,8 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
       newErrors.prepaymentPercentage = 'Prepayment percentage must be between 0 and 100';
     }
 
-    if (formData.cap < 0) {
-      newErrors.cap = 'Cap cannot be negative';
+    if (formData.capAmount < 0) {
+      newErrors.capAmount = 'Cap cannot be negative';
     }
 
     if (formData.overageCost < 0) {
@@ -135,12 +165,19 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
       
       const method = mode === 'create' ? 'POST' : 'PUT';
       
+      // Convert UI values to database enum values before sending
+      const dataToSend = {
+        ...formData,
+        pricingModel: mapUiPricingModelToDb(formData.pricingModel),
+        billingCadence: mapUiBillingCadenceToDb(formData.billingCadence)
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSend)
       });
 
       if (!response.ok) {
@@ -209,12 +246,12 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
           {/* Contract Length */}
           <div className="col-span-2 sm:col-span-1">
             <TextInput
-              id="contractLength"
+              id="contractLengthMonths"
               label="Contract Length (months)"
-              value={formData.contractLength.toString()}
+              value={formData.contractLengthMonths.toString()}
               onChange={handleChange}
               type="number"
-              required
+              error={errors.contractLengthMonths}
             />
           </div>
 
@@ -264,12 +301,12 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
           {/* Cap */}
           <div className="col-span-2 sm:col-span-1">
             <TextInput
-              id="cap"
+              id="capAmount"
               label="Cap"
-              value={formData.cap.toString()}
+              value={formData.capAmount.toString()}
               onChange={handleChange}
               type="number"
-              error={errors.cap}
+              error={errors.capAmount}
               leftIcon={<span className="text-gray-500">$</span>}
             />
           </div>
