@@ -1,19 +1,31 @@
+'use client';
+
 import React from 'react';
 import Sidebar from '@/components/shared/Sidebar';
 import { adminNavItems } from '@/config/navigation';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
-export default async function AdminLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // This is where you would check for authentication
-  // For now, we'll just use a placeholder
+  const { user, loading } = useAuth();
+  
+  // Show loading state while authenticating
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+  
+  // Use actual user info instead of placeholder
   const userInfo = {
-    name: 'Admin User',
-    role: 'Admin',
+    name: user?.name || 'User',
+    role: user?.role || 'Unknown',
   };
 
   return (

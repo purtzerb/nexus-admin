@@ -11,9 +11,14 @@ import {
   SettingsIcon,
   ReportingIcon2
 } from '@/components/shared/NavIcons';
-import { NavItem } from '@/components/shared/Sidebar';
+import type { NavItem } from '@/components/shared/Sidebar';
 
-export const adminNavItems: NavItem[] = [
+// Extended NavItem interface with role restrictions
+export interface ExtendedNavItem extends NavItem {
+  allowedRoles?: string[];
+}
+
+export const adminNavItems: ExtendedNavItem[] = [
   {
     label: 'Dashboard',
     href: '/admin/dashboard',
@@ -23,6 +28,7 @@ export const adminNavItems: NavItem[] = [
     label: 'Users',
     href: '/admin/users',
     icon: <UsersIcon />,
+    allowedRoles: ['ADMIN'], // Only admins can see this page
   },
   {
     label: 'Clients',

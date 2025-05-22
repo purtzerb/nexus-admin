@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
+import { ExtendedNavItem } from '@/config/navigation';
 
 interface IconProps {
   active?: boolean;
 }
 
+// Base NavItem interface without role restrictions
 export interface NavItem {
   label: string;
   href: string;
@@ -17,7 +19,7 @@ export interface NavItem {
 }
 
 interface SidebarProps {
-  navItems: NavItem[];
+  navItems: (NavItem | ExtendedNavItem)[];
   userInfo?: {
     name: string;
     role: string;
@@ -26,7 +28,27 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ navItems, userInfo }) => {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, isAdmin, isSolutionsEngineer } = useAuth();
+  
+  // Filter navigation items based on user role
+  const filteredNavItems = navItems.filter(item => {
+    const extendedItem = item as ExtendedNavItem;
+    
+    // If the item has allowedRoles specified, check if the user's role is included
+    if (extendedItem.allowedRoles) {
+      if (isAdmin && extendedItem.allowedRoles.includes('ADMIN')) {
+        return true;
+      }
+      if (isSolutionsEngineer && extendedItem.allowedRoles.includes('SOLUTIONS_ENGINEER')) {
+        return true;
+      }
+      // If user has neither role that matches allowedRoles, hide the item
+      return false;
+    }
+    
+    // If no allowedRoles specified, show the item to everyone
+    return true;
+  });
 
   return (
     <aside className="w-[200px] h-screen bg-darkerBackground border-r border-buttonBorder flex flex-col px-4">
@@ -35,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ navItems, userInfo }) => {
       </div>
       <nav className="flex-1 py-4">
         <ul className="space-y-1">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <li key={item.href}>
