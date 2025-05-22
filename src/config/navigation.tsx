@@ -62,6 +62,26 @@ export const clientNavItems: NavItem[] = [
     icon: <DashboardIcon />,
   },
   {
+    label: 'ROI',
+    href: '/client/roi',
+    icon: <ReportingIcon />,
+  },
+  {
+    label: 'Reporting',
+    href: '/client/reporting',
+    icon: <ReportingIcon />,
+  },
+  {
+    label: 'Credentials',
+    href: '/client/credentials',
+    icon: <SettingsIcon />,
+  },
+  {
+    label: 'Exceptions',
+    href: '/client/exceptions',
+    icon: <ExceptionsIcon />,
+  },
+  {
     label: 'Users',
     href: '/client/users',
     icon: <UsersIcon />,
@@ -72,13 +92,8 @@ export const clientNavItems: NavItem[] = [
     icon: <BillingIcon />,
   },
   {
-    label: 'Reporting',
-    href: '/client/reporting',
-    icon: <ReportingIcon />,
-  },
-  {
-    label: 'Settings',
-    href: '/client/settings',
-    icon: <SettingsIcon />,
+    label: 'Messaging',
+    href: '/client/messaging',
+    icon: <MessagingIcon />,
   },
 ];

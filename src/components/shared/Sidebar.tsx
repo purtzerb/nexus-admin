@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { useAuth } from '@/hooks/useAuth';
 
 interface IconProps {
   active?: boolean;
@@ -25,11 +26,12 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ navItems, userInfo }) => {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <aside className="w-[200px] h-screen bg-darkerBackground border-r border-buttonBorder flex flex-col px-4">
       <div className="p-4 border-b border-buttonBorder">
-        <h2 className="text-lg font-semibold">Nexus Admin</h2>
+        <h2 className="text-lg font-semibold">{`Nexus ${user?.role === 'CLIENT_USER' ? 'Client' : 'Admin'}`}</h2>
       </div>
       <nav className="flex-1 py-4">
         <ul className="space-y-1">
