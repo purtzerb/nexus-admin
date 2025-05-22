@@ -10,125 +10,44 @@ import dbConnect from '@/lib/db/db';
 export const dynamic = 'force-dynamic';
 
 /**
- * @swagger
- * /workflows/exceptions:
- *   post:
- *     summary: Add a new exception to a workflow
- *     tags: [Workflow Exceptions]
- *     security:
- *       - apiKey: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - exceptionId
- *               - workflowName
- *               - clientId
- *               - exceptionType
- *               - severity
- *             properties:
- *               exceptionId:
- *                 type: string
- *                 description: Unique identifier for the exception
- *               workflowName:
- *                 type: string
- *                 description: Name of the workflow
- *               clientId:
- *                 type: string
- *                 description: ID of the client
- *               exceptionType:
- *                 type: string
- *                 description: Type of exception
- *               severity:
- *                 type: string
- *                 enum: [LOW, MEDIUM, HIGH, CRITICAL]
- *                 description: Severity level of the exception (LOW, MEDIUM, HIGH, CRITICAL)
- *               remedy:
- *                 type: string
- *                 description: Suggested remedy for the exception
- *               status:
- *                 type: string
- *                 enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED]
- *                 default: OPEN
- *                 description: Current status of the exception (OPEN, IN_PROGRESS, RESOLVED, CLOSED)
- *     responses:
- *       201:
- *         description: Exception created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 exception:
- *                   type: object
- *       400:
- *         description: Bad request - missing required fields
- *       401:
- *         description: Unauthorized - invalid or missing API key
- *       404:
- *         description: Workflow not found
- *       409:
- *         description: Exception with this ID already exists
- *       500:
- *         description: Server error
+ * POST handler for creating a new workflow exception
+ * Adds a new exception to a workflow
+ * 
+ * Required fields in request body:
+ * - exceptionId: Unique identifier for the exception
+ * - workflowName: Name of the workflow
+ * - clientId: ID of the client
+ * - exceptionType: Type of exception
+ * - severity: Severity level (LOW, MEDIUM, HIGH, CRITICAL)
+ * 
+ * Optional fields:
+ * - remedy: Suggested remedy for the exception
+ * - status: Current status (OPEN, IN_PROGRESS, RESOLVED, CLOSED) - defaults to OPEN
+ * 
+ * Responses:
+ * - 201: Exception created successfully
+ * - 400: Bad request - missing required fields
+ * - 401: Unauthorized - invalid or missing API key
+ * - 404: Workflow not found
+ * - 409: Exception with this ID already exists
+ * - 500: Server error
  */
 /**
- * @swagger
- * /workflows/exceptions/{exceptionId}:
- *   patch:
- *     summary: Update the status of a workflow exception
- *     tags: [Workflow Exceptions]
- *     security:
- *       - apiKey: []
- *     parameters:
- *       - in: path
- *         name: exceptionId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the exception to update
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - status
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED]
- *                 description: New status for the exception (OPEN, IN_PROGRESS, RESOLVED, CLOSED)
- *     responses:
- *       200:
- *         description: Exception status updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 exception:
- *                   type: object
- *       400:
- *         description: Bad request - missing required fields
- *       401:
- *         description: Unauthorized - invalid or missing API key
- *       404:
- *         description: Exception not found
- *       500:
- *         description: Server error
+ * PATCH handler for updating a workflow exception status
+ * Updates the status of a workflow exception
+ * 
+ * Route parameter:
+ * - exceptionId: ID of the exception to update
+ * 
+ * Required fields in request body:
+ * - status: New status (OPEN, IN_PROGRESS, RESOLVED, CLOSED)
+ * 
+ * Responses:
+ * - 200: Exception status updated successfully
+ * - 400: Bad request - missing required fields
+ * - 401: Unauthorized - invalid or missing API key
+ * - 404: Exception not found
+ * - 500: Server error
  */
 export async function PATCH(request: NextRequest, { params }: any) {
   try {

@@ -22,6 +22,10 @@ I have implemented 2 types of authentication:
 2. Internal Authentication
   - This is if you want to add an internal password for authentication outside of the braintrust ecosystem. A passwordHash and passwordSalt is generated when you create users with a password. When loggin in as these users, it will not hit the braintrust API.
 
+## API Documentation
+You can view the API documentation at /api-documentation. You must be authenticated before viewing this page.
+
+
 
 
 
@@ -31,7 +35,7 @@ Assumptions:
 - Because I need to test normal users, and you also need to be able to test normal users, there are two flows for authentication:
   - We can set a password within this system, outside of the usebraintrust api
   - If you add a user without a password, then it will try to authenticate via the usebraintrust API and pass the password entered to this API endpoint. If this succeeds, then we consider that user authenticated.
-- Workflow information such as executions, exceptions, nodes have api routes for external modifications. I believe these are external to the admin app, but will be communicated to the admin app via the external API routes. View the external API routes at /api-docs.
+- Workflow information such as executions, exceptions, nodes have api routes for external modifications. I believe these are external to the admin app, but will be communicated to the admin app via the external API routes. View the external API routes at /api-documentation.
 - Client users are able to create/update/delete other client users
 
 

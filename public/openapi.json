@@ -1,0 +1,457 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Nexus API",
+    "version": "1.0.0",
+    "description": "API documentation for the Braintrust Nexus application"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API routes"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Workflow Exceptions",
+      "description": "Operations related to workflow exceptions"
+    },
+    {
+      "name": "Workflow Executions",
+      "description": "Operations related to workflow executions"
+    },
+    {
+      "name": "Workflow Nodes",
+      "description": "Operations related to workflow nodes"
+    }
+  ],
+  "paths": {
+    "/external/workflows/exceptions": {
+      "post": {
+        "summary": "Add a new exception to a workflow",
+        "tags": ["Workflow Exceptions"],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "exceptionId",
+                  "workflowName",
+                  "clientId",
+                  "exceptionType",
+                  "severity"
+                ],
+                "properties": {
+                  "exceptionId": {
+                    "type": "string",
+                    "description": "Unique identifier for the exception"
+                  },
+                  "workflowName": {
+                    "type": "string",
+                    "description": "Name of the workflow"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "description": "ID of the client"
+                  },
+                  "exceptionType": {
+                    "type": "string",
+                    "description": "Type of exception"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                    "description": "Severity level of the exception (LOW, MEDIUM, HIGH, CRITICAL)"
+                  },
+                  "remedy": {
+                    "type": "string",
+                    "description": "Suggested remedy for the exception"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
+                    "default": "OPEN",
+                    "description": "Current status of the exception (OPEN, IN_PROGRESS, RESOLVED, CLOSED)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Exception created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "exception": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key"
+          },
+          "404": {
+            "description": "Workflow not found"
+          },
+          "409": {
+            "description": "Exception with this ID already exists"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/external/workflows/exceptions/{exceptionId}": {
+      "patch": {
+        "summary": "Update the status of a workflow exception",
+        "tags": ["Workflow Exceptions"],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exceptionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the exception to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
+                    "description": "New status for the exception (OPEN, IN_PROGRESS, RESOLVED, CLOSED)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exception status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "exception": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key"
+          },
+          "404": {
+            "description": "Exception not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/external/workflows/executions": {
+      "post": {
+        "summary": "Add a new execution to a workflow",
+        "tags": ["Workflow Executions"],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "executionId",
+                  "workflowName",
+                  "clientId"
+                ],
+                "properties": {
+                  "executionId": {
+                    "type": "string",
+                    "description": "Unique identifier for the execution"
+                  },
+                  "workflowName": {
+                    "type": "string",
+                    "description": "Name of the workflow"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "description": "ID of the client"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["SUCCESS", "FAILURE"],
+                    "default": "SUCCESS",
+                    "description": "Status of the execution (SUCCESS, FAILURE)"
+                  },
+                  "duration": {
+                    "type": "number",
+                    "description": "Duration of the execution in milliseconds"
+                  },
+                  "details": {
+                    "type": "string",
+                    "description": "Details of the execution"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Execution created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "execution": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key"
+          },
+          "404": {
+            "description": "Workflow not found"
+          },
+          "409": {
+            "description": "Execution with this ID already exists"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/external/workflows/nodes": {
+      "post": {
+        "summary": "Add a new node to a workflow",
+        "tags": ["Workflow Nodes"],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nodeId",
+                  "workflowName",
+                  "clientId",
+                  "nodeName",
+                  "nodeType"
+                ],
+                "properties": {
+                  "nodeId": {
+                    "type": "string",
+                    "description": "Unique identifier for the node"
+                  },
+                  "workflowName": {
+                    "type": "string",
+                    "description": "Name of the workflow"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "description": "ID of the client"
+                  },
+                  "nodeName": {
+                    "type": "string",
+                    "description": "Name of the node"
+                  },
+                  "nodeType": {
+                    "type": "string",
+                    "description": "Type of the node"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["ACTIVE", "INACTIVE", "DELETED"],
+                    "default": "ACTIVE",
+                    "description": "Status of the node (ACTIVE, INACTIVE, DELETED)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Node created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "node": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key"
+          },
+          "404": {
+            "description": "Workflow not found"
+          },
+          "409": {
+            "description": "Node with this ID already exists"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a node from a workflow",
+        "tags": ["Workflow Nodes"],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "nodeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the node to remove"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "node": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing nodeId"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key"
+          },
+          "404": {
+            "description": "Node not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    }
+  }
+}

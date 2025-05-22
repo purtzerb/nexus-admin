@@ -7,55 +7,21 @@ import dbConnect from '@/lib/db/db';
 export const dynamic = 'force-dynamic';
 
 /**
- * @swagger
- * /workflows/exceptions/{exceptionId}:
- *   patch:
- *     summary: Update the status of a workflow exception
- *     tags: [Workflow Exceptions]
- *     security:
- *       - apiKey: []
- *     parameters:
- *       - in: path
- *         name: exceptionId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the exception to update
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - status
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED]
- *                 description: New status for the exception (OPEN, IN_PROGRESS, RESOLVED, CLOSED)
- *     responses:
- *       200:
- *         description: Exception status updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 exception:
- *                   type: object
- *       400:
- *         description: Bad request - missing required fields
- *       401:
- *         description: Unauthorized - invalid or missing API key
- *       404:
- *         description: Exception not found
- *       500:
- *         description: Server error
+ * PATCH handler for updating a workflow exception status
+ * Updates the status of a workflow exception
+ * 
+ * Route parameter:
+ * - exceptionId: ID of the exception to update
+ * 
+ * Required fields in request body:
+ * - status: New status (OPEN, IN_PROGRESS, RESOLVED, CLOSED)
+ * 
+ * Responses:
+ * - 200: Exception status updated successfully
+ * - 400: Bad request - missing required fields
+ * - 401: Unauthorized - invalid or missing API key
+ * - 404: Exception not found
+ * - 500: Server error
  */
 export async function PATCH(
   request: NextRequest,

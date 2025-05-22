@@ -9,70 +9,26 @@ import dbConnect from '@/lib/db/db';
 export const dynamic = 'force-dynamic';
 
 /**
- * @swagger
- * /workflows/nodes:
- *   post:
- *     summary: Add a new node to a workflow
- *     tags: [Workflow Nodes]
- *     security:
- *       - apiKey: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - nodeId
- *               - workflowName
- *               - clientId
- *               - nodeName
- *               - nodeType
- *             properties:
- *               nodeId:
- *                 type: string
- *                 description: Unique identifier for the node
- *               workflowName:
- *                 type: string
- *                 description: Name of the workflow
- *               clientId:
- *                 type: string
- *                 description: ID of the client
- *               nodeName:
- *                 type: string
- *                 description: Name of the node
- *               nodeType:
- *                 type: string
- *                 description: Type of the node
- *               status:
- *                 type: string
- *                 enum: [ACTIVE, INACTIVE, DELETED]
- *                 default: ACTIVE
- *                 description: Status of the node (ACTIVE, INACTIVE, DELETED)
- *     responses:
- *       201:
- *         description: Node created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 node:
- *                   type: object
- *       400:
- *         description: Bad request - missing required fields
- *       401:
- *         description: Unauthorized - invalid or missing API key
- *       404:
- *         description: Workflow not found
- *       409:
- *         description: Node with this ID already exists
- *       500:
- *         description: Server error
+ * POST handler for creating a new workflow node
+ * Adds a new node to a workflow
+ * 
+ * Required fields in request body:
+ * - nodeId: Unique identifier for the node
+ * - workflowName: Name of the workflow
+ * - clientId: ID of the client
+ * - nodeName: Name of the node
+ * - nodeType: Type of the node
+ * 
+ * Optional fields:
+ * - status: Status of the node (ACTIVE, INACTIVE, DELETED) - defaults to ACTIVE
+ * 
+ * Responses:
+ * - 201: Node created successfully
+ * - 400: Bad request - missing required fields
+ * - 401: Unauthorized - invalid or missing API key
+ * - 404: Workflow not found
+ * - 409: Node with this ID already exists
+ * - 500: Server error
  */
 export async function POST(request: NextRequest) {
   try {
@@ -142,42 +98,18 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * @swagger
- * /workflows/nodes:
- *   delete:
- *     summary: Remove a node from a workflow
- *     tags: [Workflow Nodes]
- *     security:
- *       - apiKey: []
- *     parameters:
- *       - in: query
- *         name: nodeId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the node to remove
- *     responses:
- *       200:
- *         description: Node deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 node:
- *                   type: object
- *       400:
- *         description: Bad request - missing nodeId
- *       401:
- *         description: Unauthorized - invalid or missing API key
- *       404:
- *         description: Node not found
- *       500:
- *         description: Server error
+ * DELETE handler for removing a workflow node
+ * Removes a node from a workflow
+ * 
+ * Query parameter:
+ * - nodeId: ID of the node to remove
+ * 
+ * Responses:
+ * - 200: Node deleted successfully
+ * - 400: Bad request - missing nodeId
+ * - 401: Unauthorized - invalid or missing API key
+ * - 404: Node not found
+ * - 500: Server error
  */
 export async function DELETE(request: NextRequest) {
   try {

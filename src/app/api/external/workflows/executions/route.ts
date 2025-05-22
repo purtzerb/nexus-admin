@@ -9,68 +9,26 @@ import dbConnect from '@/lib/db/db';
 export const dynamic = 'force-dynamic';
 
 /**
- * @swagger
- * /workflows/executions:
- *   post:
- *     summary: Add a new execution to a workflow
- *     tags: [Workflow Executions]
- *     security:
- *       - apiKey: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - executionId
- *               - workflowName
- *               - clientId
- *             properties:
- *               executionId:
- *                 type: string
- *                 description: Unique identifier for the execution
- *               workflowName:
- *                 type: string
- *                 description: Name of the workflow
- *               clientId:
- *                 type: string
- *                 description: ID of the client
- *               status:
- *                 type: string
- *                 enum: [SUCCESS, FAILURE]
- *                 default: SUCCESS
- *                 description: Status of the execution (SUCCESS, FAILURE)
- *               duration:
- *                 type: number
- *                 description: Duration of the execution in milliseconds
- *               details:
- *                 type: string
- *                 description: Details of the execution
- *     responses:
- *       201:
- *         description: Execution created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 execution:
- *                   type: object
- *       400:
- *         description: Bad request - missing required fields
- *       401:
- *         description: Unauthorized - invalid or missing API key
- *       404:
- *         description: Workflow not found
- *       409:
- *         description: Execution with this ID already exists
- *       500:
- *         description: Server error
+ * POST handler for creating a new workflow execution
+ * Adds a new execution to a workflow
+ * 
+ * Required fields in request body:
+ * - executionId: Unique identifier for the execution
+ * - workflowName: Name of the workflow
+ * - clientId: ID of the client
+ * 
+ * Optional fields:
+ * - status: Status of the execution (SUCCESS, FAILURE) - defaults to SUCCESS
+ * - duration: Duration of the execution in milliseconds
+ * - details: Details of the execution
+ * 
+ * Responses:
+ * - 201: Execution created successfully
+ * - 400: Bad request - missing required fields
+ * - 401: Unauthorized - invalid or missing API key
+ * - 404: Workflow not found
+ * - 409: Execution with this ID already exists
+ * - 500: Server error
  */
 export async function POST(request: NextRequest) {
   try {
