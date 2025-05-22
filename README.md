@@ -1,39 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Install Dependencies
+I had an issue with swagger docs, so the legacy dependencies is needed for now.
+npm i --legacy-peer-deps
 
-## Getting Started
+## Run Docker
+npm run db:up
 
-First, run the development server:
+## Seed Database
+npm run db:seed
 
-```bash
+## Start Application
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database Seeding
+You can view the script for seeding within scripts/setup.js. You can add more users, or modify the existing users there. This script is meant to add initial users to the database, allow you to login with an admin account. Once you are logged in with an admin account, you can create other users
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Authentication
+I have implemented 2 types of authentication:
+1. Usebraintrust API Authentication
+  - This is if you want to use your braintrust email/password for authentication.
+    For these users, you only want to add an email to the user record. If no passwordHash exists on the record, then it attempts to login via usebraintrust API and pass the password entered to this API endpoint. If this succeeds, then we consider that user authenticated.
+2. Internal Authentication
+  - This is if you want to add an internal password for authentication outside of the braintrust ecosystem. A passwordHash and passwordSalt is generated when you create users with a password. When loggin in as these users, it will not hit the braintrust API.
 
 
 
