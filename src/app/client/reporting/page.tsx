@@ -1,149 +1,185 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Header from '@/components/shared/PageHeader';
+import { useWorkflowExecutions, IWorkflowExecutionData } from '@/hooks/useWorkflowExecutions';
+
+// Helper function to format date for display
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }) + ' ' + date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+};
+
+// Helper function to format duration in milliseconds
+const formatDuration = (durationMs: number) => {
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  } else if (durationMs < 60000) {
+    return `${(durationMs / 1000).toFixed(2)}s`;
+  } else {
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = ((durationMs % 60000) / 1000).toFixed(0);
+    return `${minutes}m ${seconds}s`;
+  }
+};
 
 export default function ClientReportingPage() {
+  const [timeRange, setTimeRange] = useState('last7days');
+  const {
+    data,
+    isLoading,
+    error,
+    pagination,
+    filters,
+    actions
+  } = useWorkflowExecutions();
   return (
     <div className="min-h-screen bg-background">
       <Header pageTitle="Reporting" />
       <div className="p-6 space-y-6">
         <div className="bg-cardBackground p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-textPrimary">Available Reports</h2>
+            <h2 className="text-xl font-semibold text-textPrimary">Workflow Execution Logs</h2>
             <div className="flex space-x-2">
-              <select className="border border-buttonBorder rounded-md px-3 py-1 text-sm bg-white text-textPrimary">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
-                <option>Last 90 days</option>
-                <option>All time</option>
+              <select
+                className="border border-buttonBorder rounded-md px-3 py-1 text-sm bg-white text-textPrimary"
+                value={filters.workflowId}
+                onChange={(e) => actions.handleWorkflowChange(e.target.value)}
+              >
+                <option value="all">All Workflows</option>
+                {data?.workflows.map((workflow) => (
+                  <option key={workflow._id} value={workflow._id}>
+                    {workflow.name}
+                  </option>
+                ))}
               </select>
-              <button className="px-3 py-1 bg-buttonPrimary text-white rounded-md hover:bg-opacity-90 transition-colors text-sm">
-                Export
-              </button>
+              <select
+                className="border border-buttonBorder rounded-md px-3 py-1 text-sm bg-white text-textPrimary"
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+              >
+                <option value="last7days">Last 7 days</option>
+                <option value="last30days">Last 30 days</option>
+                <option value="last90days">Last 90 days</option>
+                <option value="alltime">All time</option>
+              </select>
             </div>
           </div>
-          
-          <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Report Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Generated</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-buttonBorder">
+              <thead>
+                <tr className="text-left text-sm text-textSecondary">
+                  <th className="px-4 py-3">Timestamp</th>
+                  <th className="px-4 py-3">Workflow</th>
+                  <th className="px-4 py-3">Execution Details</th>
+                  <th className="px-4 py-3 text-center">Duration</th>
+                  <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                <tr className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Workflow Performance</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Summary of all workflow executions and their performance metrics</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">May 21, 2025</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 hover:text-indigo-900">
-                    <button className="mr-2">View</button>
-                    <button>Download</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Cost Savings Analysis</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Detailed breakdown of time and money saved by automation</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">May 18, 2025</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 hover:text-indigo-900">
-                    <button className="mr-2">View</button>
-                    <button>Download</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Exception Analytics</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Analysis of workflow exceptions and their resolution times</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">May 15, 2025</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 hover:text-indigo-900">
-                    <button className="mr-2">View</button>
-                    <button>Download</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Usage Statistics</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Detailed usage metrics across all workflows and integrations</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">May 10, 2025</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 hover:text-indigo-900">
-                    <button className="mr-2">View</button>
-                    <button>Download</button>
-                  </td>
-                </tr>
+              <tbody className="divide-y divide-buttonBorder">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                      <p className="mt-2 text-textSecondary">Loading execution logs...</p>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-8 text-error">
+                      <p>Error loading execution logs. Please try again later.</p>
+                    </td>
+                  </tr>
+                ) : (!data?.executions || data.executions.length === 0) ? (
+                  <tr>
+                    <td colSpan={5} className="text-textSecondary text-center py-6">
+                      No execution logs found for the selected workflow.
+                    </td>
+                  </tr>
+                ) : (
+                  data?.executions.map((execution: IWorkflowExecutionData) => {
+                    // Find the workflow name
+                    const workflow = data.workflows.find(w => w._id === execution.workflowId);
+                    const workflowName = workflow ? workflow.name : 'Unknown Workflow';
+
+                    return (
+                      <tr key={execution._id} className="hover:bg-darkerBackground">
+                        <td className="px-4 py-3 text-sm">
+                          {formatDateTime(execution.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {workflowName}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {execution.details}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          {formatDuration(execution.duration)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            execution.status === 'SUCCESS'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {execution.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-cardBackground p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-textPrimary">Report Schedules</h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 border rounded-md">
-                <div>
-                  <h3 className="font-medium text-textPrimary">Weekly Performance Report</h3>
-                  <p className="text-sm text-textSecondary">Every Monday at 8:00 AM</p>
-                </div>
-                <div>
-                  <button className="text-indigo-600 hover:text-indigo-900 text-sm">Edit</button>
-                </div>
+
+          {/* Pagination controls */}
+          {!isLoading && !error && data?.executions && data.executions.length > 0 && (
+            <div className="flex justify-between items-center mt-4 px-4">
+              <div className="text-sm text-textSecondary">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of {pagination.totalCount} executions
               </div>
-              <div className="flex justify-between items-center p-3 border rounded-md">
-                <div>
-                  <h3 className="font-medium text-textPrimary">Monthly ROI Report</h3>
-                  <p className="text-sm text-textSecondary">1st of every month at 9:00 AM</p>
-                </div>
-                <div>
-                  <button className="text-indigo-600 hover:text-indigo-900 text-sm">Edit</button>
-                </div>
-              </div>
-              <div className="flex justify-between items-center p-3 border rounded-md">
-                <div>
-                  <h3 className="font-medium text-textPrimary">Quarterly Business Review</h3>
-                  <p className="text-sm text-textSecondary">Last day of quarter at 2:00 PM</p>
-                </div>
-                <div>
-                  <button className="text-indigo-600 hover:text-indigo-900 text-sm">Edit</button>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <button className="px-4 py-2 bg-buttonPrimary text-white rounded hover:bg-opacity-90 transition-colors text-sm">
-                Create New Schedule
-              </button>
-            </div>
-          </div>
-          
-          <div className="bg-cardBackground p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-textPrimary">Custom Reports</h2>
-            <p className="text-textSecondary mb-4">
-              Build custom reports with specific metrics and data points relevant to your business needs.
-            </p>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" id="workflows" className="rounded" />
-                <label htmlFor="workflows" className="text-textPrimary">Workflow Data</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" id="exceptions" className="rounded" />
-                <label htmlFor="exceptions" className="text-textPrimary">Exception Data</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" id="savings" className="rounded" />
-                <label htmlFor="savings" className="text-textPrimary">Cost Savings</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" id="usage" className="rounded" />
-                <label htmlFor="usage" className="text-textPrimary">Usage Statistics</label>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => actions.handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className={`px-3 py-1 border border-buttonBorder rounded-md text-sm ${pagination.page === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-darkerBackground'}`}
+                >
+                  Previous
+                </button>
+                <span className="px-3 py-1 border border-buttonBorder rounded-md text-sm bg-white">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => actions.handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.totalPages}
+                  className={`px-3 py-1 border border-buttonBorder rounded-md text-sm ${pagination.page === pagination.totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-darkerBackground'}`}
+                >
+                  Next
+                </button>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => actions.handleLimitChange(parseInt(e.target.value))}
+                  className="px-3 py-1 border border-buttonBorder rounded-md text-sm bg-white"
+                >
+                  <option value="10">10 rows</option>
+                  <option value="20">20 rows</option>
+                  <option value="50">50 rows</option>
+                  <option value="100">100 rows</option>
+                </select>
               </div>
             </div>
-            <div className="mt-4">
-              <button className="px-4 py-2 bg-buttonPrimary text-white rounded hover:bg-opacity-90 transition-colors text-sm">
-                Generate Custom Report
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

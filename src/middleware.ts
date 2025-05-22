@@ -15,37 +15,33 @@ const publicPaths = [
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Check if the path is public
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
-  
+
   // Check for API routes that need authentication
   // Skip external API routes as they have their own authentication mechanism
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/external') && !pathname.startsWith('/api/swagger')) {
     // Log all cookies for debugging
     console.log('Middleware - API Route:', pathname);
-    console.log('Middleware - Cookies:', Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value])));
-    
+
     const token = request.cookies.get('auth-token');
-    const nextAuthSession = request.cookies.get('next-auth.session-token') || 
+    const nextAuthSession = request.cookies.get('next-auth.session-token') ||
                            request.cookies.get('__Secure-next-auth.session-token');
-    
-    console.log('Middleware - Auth Token:', token?.value);
-    console.log('Middleware - NextAuth Session Token:', nextAuthSession?.value);
-    
+
     // Allow the request to proceed if either auth system has a valid token
     if (nextAuthSession) {
       console.log('Middleware - NextAuth session found, allowing request');
       return NextResponse.next();
     }
-    
+
     if (!token) {
       console.log('Middleware - No auth tokens found, returning 401');
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-    
+
     try {
       // Verify the token
       const secret = new TextEncoder().encode(process.env.JWT_SECRET);
@@ -55,16 +51,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     }
   }
-  
+
   // For non-API routes, redirect to login if not authenticated
   const token = request.cookies.get('auth-token');
-  
+
   if (!token) {
     const url = new URL('/login', request.url);
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
-  
+
   try {
     // Verify the token
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
