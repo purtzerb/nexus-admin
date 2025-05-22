@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import { verifyPassword } from '@/lib/auth/passwordUtils';
 import { userService } from '@/lib/db/userService';
 import { IUser } from '@/models/User';
 import { AUTH_URL, AUTH_COOKIE_NAME, AUTH_COOKIE_EXPIRY, LOCAL_AUTH_ENABLED, UserRole } from '@/lib/constants';
@@ -24,11 +24,16 @@ export async function POST(request: NextRequest) {
     let isAuthenticated = false;
     let authenticatedUser = user;
 
+    console.log("BONGO Local Auth", {
+      user
+    })
+
     // Check if user exists and has local password credentials
     if (LOCAL_AUTH_ENABLED && user && user.passwordHash && user.passwordSalt) {
-      // Verify password with local credentials
-      const hashedPassword = await bcrypt.hash(password, user.passwordSalt);
-      isAuthenticated = hashedPassword === user.passwordHash;
+      // Use our custom password verification that matches how passwords are created
+      isAuthenticated = verifyPassword(password, user.passwordHash, user.passwordSalt);
+      
+      console.log("Authentication result:", { isAuthenticated });
     } else {
       // Authenticate against external Braintrust API
       try {
@@ -42,12 +47,12 @@ export async function POST(request: NextRequest) {
 
         if (response.ok) {
           isAuthenticated = true;
-          
+
           // If user doesn't exist in our database but authenticated via Braintrust API,
           // find or create the user in our database
           if (!authenticatedUser) {
             authenticatedUser = await userService.getUserByEmail(email) as IUser | null;
-            
+
             // If still no user, create a new one with basic information
             if (!authenticatedUser) {
               const newUserData = {
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
                 role: UserRole.CLIENT_USER, // Default role
                 // Add other required fields as needed
               };
-              
+
               authenticatedUser = await userService.createUser(newUserData) as IUser;
             }
           }

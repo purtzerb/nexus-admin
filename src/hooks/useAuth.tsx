@@ -52,7 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         setLoading(true);
         const response = await fetch('/api/auth/me');
-        
+
         if (!response.ok) {
           if (response.status === 401) {
             // If not authenticated, redirect to login
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
           throw new Error('Authentication check failed');
         }
-        
+
         const data = await response.json();
         setUser(data.user);
       } catch (error) {
@@ -94,12 +94,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const data = await response.json();
       setUser(data.user);
-      
+
       // Redirect based on role
       if (data.user.role === 'CLIENT_USER') {
-        router.push('/client');
+        router.push('/client/dashboard');
       } else {
-        router.push('/admin');
+        router.push('/admin/dashboard');
       }
     } catch (error) {
       console.error('Login error:', error);
