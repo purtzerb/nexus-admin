@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import dbConnect from '@/lib/db/db';
 import { Client, Workflow, WorkflowExecution, WorkflowException, Invoice, ClientSubscription, WorkflowNode } from '@/models';
-import { Types } from 'mongoose';
+import mongoose from 'mongoose';
 
 // Force dynamic rendering to ensure all HTTP methods are handled correctly
 export const dynamic = 'force-dynamic';
@@ -51,10 +51,15 @@ export async function GET(req: NextRequest) {
       return unauthorizedResponse();
     }
     
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
+    
+    // For Solutions Engineers, we need their assigned client IDs
+    const isSE = user.role === 'SOLUTIONS_ENGINEER';
+    const assignedClientIds = isSE && Array.isArray(user.assignedClientIds) ? 
+      user.assignedClientIds.map(id => new mongoose.Types.ObjectId(id)) : null;
     
     // Parse query parameters
     const url = new URL(req.url);
@@ -65,8 +70,12 @@ export async function GET(req: NextRequest) {
     // Get date range based on timespan
     const { startDate, endDate } = getDateRange(timespan);
     
-    // First, get all active clients 
-    const activeClients = await Client.find({ status: 'ACTIVE' }).lean();
+    // Get clients based on user role (all active clients for admin, assigned clients for SE)
+    const clientFilter = isSE && assignedClientIds ? 
+      { _id: { $in: assignedClientIds } } : 
+      { status: 'ACTIVE' };
+    
+    const activeClients = await Client.find(clientFilter).lean();
     
     // Define an interface for client dashboard data
     interface ClientData {

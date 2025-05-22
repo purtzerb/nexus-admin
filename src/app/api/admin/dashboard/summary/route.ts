@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import dbConnect from '@/lib/db/db';
 import { Client, Workflow, WorkflowExecution, WorkflowException, Invoice } from '@/models';
+import mongoose from 'mongoose';
 
 // Force dynamic rendering to ensure all HTTP methods are handled correctly
 export const dynamic = 'force-dynamic';
@@ -50,10 +51,15 @@ export async function GET(req: NextRequest) {
       return unauthorizedResponse();
     }
     
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
+    
+    // For Solutions Engineers, we need their assigned client IDs
+    const isSE = user.role === 'SOLUTIONS_ENGINEER';
+    const assignedClientIds = isSE && Array.isArray(user.assignedClientIds) ? 
+      user.assignedClientIds.map((id: string) => new mongoose.Types.ObjectId(id)) : null;
     
     // Parse query parameters
     const url = new URL(req.url);
@@ -62,6 +68,15 @@ export async function GET(req: NextRequest) {
     // Get date range based on timespan
     const { startDate, endDate } = getDateRange(timespan);
     
+    // Build client filter for SE users
+    const clientFilter = isSE && assignedClientIds ? 
+      { _id: { $in: assignedClientIds } } : 
+      { status: 'ACTIVE' };
+
+    // Get client IDs (either all active clients for admins, or assigned clients for SEs)
+    const clients = await Client.find(clientFilter).lean();
+    const clientIds = clients.map(client => client._id);
+
     // Aggregate data for summary statistics
     const [
       totalWorkflows,
@@ -71,28 +86,34 @@ export async function GET(req: NextRequest) {
       totalRevenue,
       timeSaved
     ] = await Promise.all([
-      // Total workflows
-      Workflow.countDocuments({ status: 'ACTIVE' }),
+      // Total workflows for the user's clients
+      Workflow.countDocuments({ 
+        status: 'ACTIVE',
+        ...(isSE && { clientId: { $in: clientIds } })
+      }),
       
-      // Total exceptions in the time period
+      // Total exceptions in the time period for the user's clients
       WorkflowException.countDocuments({
-        createdAt: { $gte: startDate, $lte: endDate }
+        createdAt: { $gte: startDate, $lte: endDate },
+        ...(isSE && { clientId: { $in: clientIds } })
       }),
       
-      // Total executions in the time period
+      // Total executions in the time period for the user's clients
       WorkflowExecution.countDocuments({
-        createdAt: { $gte: startDate, $lte: endDate }
+        createdAt: { $gte: startDate, $lte: endDate },
+        ...(isSE && { clientId: { $in: clientIds } })
       }),
       
-      // Total active clients
-      Client.countDocuments({ status: 'ACTIVE' }),
+      // Total active clients (for admin) or assigned clients (for SE)
+      Promise.resolve(clients.length),
       
-      // Total revenue from paid invoices in the time period
+      // Total revenue from paid invoices in the time period for the user's clients
       Invoice.aggregate([
         {
           $match: {
             status: 'PAID',
-            invoiceDate: { $gte: startDate, $lte: endDate }
+            invoiceDate: { $gte: startDate, $lte: endDate },
+            ...(isSE && { clientId: { $in: clientIds } })
           }
         },
         {
@@ -103,12 +124,13 @@ export async function GET(req: NextRequest) {
         }
       ]).then(result => result.length > 0 ? result[0].total : 0),
       
-      // Calculate time saved based on executions and workflow time saved per execution
+      // Calculate time saved based on executions and workflow time saved per execution for the user's clients
       WorkflowExecution.aggregate([
         {
           $match: {
             status: 'SUCCESS',
-            createdAt: { $gte: startDate, $lte: endDate }
+            createdAt: { $gte: startDate, $lte: endDate },
+            ...(isSE && { clientId: { $in: clientIds } })
           }
         },
         {
@@ -148,23 +170,26 @@ export async function GET(req: NextRequest) {
       prevPeriodRevenue,
       prevPeriodTimeSaved
     ] = await Promise.all([
-      // Previous period workflows
+      // Previous period workflows for the user's clients
       Workflow.countDocuments({ 
         status: 'ACTIVE',
-        createdAt: { $lt: startDate }
+        createdAt: { $lt: startDate },
+        ...(isSE && { clientId: { $in: clientIds } })
       }),
       
-      // Previous period exceptions
+      // Previous period exceptions for the user's clients
       WorkflowException.countDocuments({
-        createdAt: { $gte: prevPeriodStartDate, $lt: startDate }
+        createdAt: { $gte: prevPeriodStartDate, $lt: startDate },
+        ...(isSE && { clientId: { $in: clientIds } })
       }),
       
-      // Previous period revenue
+      // Previous period revenue for the user's clients
       Invoice.aggregate([
         {
           $match: {
             status: 'PAID',
-            invoiceDate: { $gte: prevPeriodStartDate, $lt: startDate }
+            invoiceDate: { $gte: prevPeriodStartDate, $lt: startDate },
+            ...(isSE && { clientId: { $in: clientIds } })
           }
         },
         {
@@ -175,12 +200,13 @@ export async function GET(req: NextRequest) {
         }
       ]).then(result => result.length > 0 ? result[0].total : 0),
       
-      // Previous period time saved
+      // Previous period time saved for the user's clients
       WorkflowExecution.aggregate([
         {
           $match: {
             status: 'SUCCESS',
-            createdAt: { $gte: prevPeriodStartDate, $lt: startDate }
+            createdAt: { $gte: prevPeriodStartDate, $lt: startDate },
+            ...(isSE && { clientId: { $in: clientIds } })
           }
         },
         {

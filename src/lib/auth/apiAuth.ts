@@ -12,6 +12,7 @@ export interface AuthUser {
   email?: string;
   role: UserRole;
   clientId?: string;
+  assignedClientIds?: string[];
 }
 
 /**
@@ -39,15 +40,17 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
         return null;
       }
       
-      // For client users, we may need to fetch additional info
-      if (userRole === 'CLIENT_USER') {
+      // For client users and solutions engineers, we need to fetch additional info
+      if (userRole === 'CLIENT_USER' || userRole === 'SOLUTIONS_ENGINEER') {
         const user = await userService.getUserById(userId);
         if (user) {
           return {
             id: userId,
             email: email || user.email,
             role: userRole,
-            clientId: user.clientId?.toString()
+            clientId: user.clientId?.toString(),
+            assignedClientIds: userRole === 'SOLUTIONS_ENGINEER' ? 
+              user.assignedClientIds?.map(id => id.toString()) : undefined
           };
         }
       }

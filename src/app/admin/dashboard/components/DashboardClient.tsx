@@ -20,7 +20,7 @@ import SelectInput from '@/components/shared/inputs/SelectInput';
 import PageHeader from '@/components/shared/PageHeader';
 
 export default function DashboardClient() {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, isSolutionsEngineer, isAdminOrSE, loading: authLoading, user } = useAuth();
   const [timespan, setTimespan] = useState<TimespanOption>('last30days');
   const [sortBy, setSortBy] = useState<SortField>('revenue');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -31,9 +31,9 @@ export default function DashboardClient() {
     isLoading: isSummaryLoading,
     error: summaryError
   } = useQuery<DashboardSummary>({
-    queryKey: ['dashboardSummary', timespan],
+    queryKey: ['dashboardSummary', timespan, user?.id],
     queryFn: () => getDashboardSummary(timespan),
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && isAdminOrSE,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -43,9 +43,9 @@ export default function DashboardClient() {
     isLoading: isClientsLoading,
     error: clientsError
   } = useQuery<ClientsResponse>({
-    queryKey: ['dashboardClients', timespan, sortBy, sortOrder],
+    queryKey: ['dashboardClients', timespan, sortBy, sortOrder, user?.id],
     queryFn: () => getDashboardClients({ timespan, sortBy, sortOrder }),
-    enabled: !authLoading && isAdmin,
+    enabled: !authLoading && isAdminOrSE,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -60,11 +60,11 @@ export default function DashboardClient() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdminOrSE) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+          <h1 className="text-2xl font-bold text-error mb-4">Access Denied</h1>
           <p>You don't have permission to view this page.</p>
         </div>
       </div>
