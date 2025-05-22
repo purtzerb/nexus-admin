@@ -913,8 +913,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 const se = solutionsEngineers?.find(s => s._id === seId);
                 return (
                   <div key={seId} className="grid grid-cols-3 gap-2 p-2 border-b border-buttonBorder last:border-b-0">
-                    <div title={se?.name || 'Unknown'}>{truncateText(se?.name || 'Unknown')}</div>
-                    <div title={se?.email || ''}>{truncateText(se?.email || '')}</div>
+                    <div title={se?.name || 'Unknown'}>{se?.name || 'Unknown'}</div>
+                    <div title={se?.email || ''}>{se?.email || ''}</div>
                     <div className="flex justify-end">
                       <button
                         type="button"
