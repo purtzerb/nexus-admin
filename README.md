@@ -45,6 +45,7 @@ Assumptions:
   - We can set a password within this system, outside of the usebraintrust api
   - If you add a user without a password, then it will try to authenticate via the usebraintrust API and pass the password entered to this API endpoint. If this succeeds, then we consider that user authenticated.
 - Workflow information such as executions, exceptions, nodes have api routes for external modifications. I believe these are external to the admin app, but will be communicated to the admin app via the external API routes. View the external API routes at /api-docs.
+- Client users are able to create/update/delete other client users
 
 
 
@@ -54,3 +55,11 @@ Functionality:
 - client/billing storage used is not implemented. I hardcoded this. I am not sure where we would input/receive this information from.
 - client/billing "Billing Actions" is not implemented. I did not hook up any payment mechanisms due to time constraints and I do not have information to hook it up for real billing.
 - I am not sure how credits work. Within the admin application, I added the ability to apply credit to clients in $. But it seems like within client/billing it should be credits that are not dollars, but some other type. Not sure exactly how you want to implement credits, so I applied it in dollars with the idea they could be discounted from their invoices.
+- Client and admin messaging pages are not implemented.
+
+
+
+TODO:
+-[] Finish out client pages
+-[] Go through admin flows and restrict SE abilities as appropriate
+-[]
