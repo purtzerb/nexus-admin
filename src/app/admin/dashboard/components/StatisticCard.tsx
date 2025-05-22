@@ -44,9 +44,12 @@ export default function StatisticCard({
     return formatPercentage(change);
   }, [change]);
 
+  // Determine the actual trend direction (up or down)
+  const isTrendingUp = change > 0;
+  
   // Determine if the change is positive (green) or negative (red)
-  // For exceptions, the meaning is inverted: a decrease is positive
-  const isPositiveChange = icon === 'exception' ? change < 0 : change > 0;
+  // For exceptions, the meaning is inverted: an increase is bad
+  const isPositiveChange = icon === 'exception' ? !isTrendingUp : isTrendingUp;
 
   // Choose icon based on type
   const IconComponent = React.useMemo(() => {
@@ -86,10 +89,10 @@ export default function StatisticCard({
         </div>
       </div>
       <div className="flex items-center mt-4">
-        {isPositiveChange ? (
-          <TrendingUp className={`w-4 h-4 mr-1 ${icon === 'exception' ? 'text-green-500' : 'text-green-500'}`} />
+        {isTrendingUp ? (
+          <TrendingUp className={`w-4 h-4 mr-1 ${isPositiveChange ? 'text-green-500' : 'text-red-500'}`} />
         ) : (
-          <TrendingDown className={`w-4 h-4 mr-1 ${icon === 'exception' ? 'text-red-500' : 'text-red-500'}`} />
+          <TrendingDown className={`w-4 h-4 mr-1 ${isPositiveChange ? 'text-green-500' : 'text-red-500'}`} />
         )}
         <span className={`text-sm font-medium ${
           isPositiveChange ? 'text-green-500' : 'text-red-500'
