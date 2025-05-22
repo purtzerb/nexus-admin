@@ -18,13 +18,29 @@ export async function GET(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
-    // Get all invoices
-    const invoices = await Invoice.find({}).sort({ invoiceDate: -1 }).lean();
+    // Get invoices based on user role
+    let invoices;
+    
+    // For SE users, only show invoices for their assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      // If SE has no assigned clients, return empty array
+      if (!user.assignedClientIds || user.assignedClientIds.length === 0) {
+        return NextResponse.json({ invoices: [] });
+      }
+      
+      // Filter invoices by assigned client IDs
+      invoices = await Invoice.find({
+        clientId: { $in: user.assignedClientIds }
+      }).sort({ invoiceDate: -1 }).lean();
+    } else {
+      // Admin users can see all invoices
+      invoices = await Invoice.find({}).sort({ invoiceDate: -1 }).lean();
+    }
 
     // Get all client IDs from invoices
     const clientIds = [...new Set(invoices.map(invoice => invoice.clientId))];
@@ -75,12 +91,19 @@ export async function POST(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
-
+    
     const data = await req.json();
+    
+    // For SE users, check if the client is one of their assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(data.clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
+    }
 
     // Validate required fields
     const requiredFields = ['clientId', 'clientSubscriptionId', 'invoiceDate', 'dueDate', 'amountBilled', 'status'];

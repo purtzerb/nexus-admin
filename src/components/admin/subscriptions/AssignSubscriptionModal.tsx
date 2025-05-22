@@ -68,12 +68,39 @@ const AssignSubscriptionModal: React.FC<AssignSubscriptionModalProps> = ({
     const fetchSubscriptionPlans = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/admin/subscription-plans');
-        if (!response.ok) {
-          throw new Error('Failed to fetch subscription plans');
+
+        // Try the subscriptions endpoint first
+        let response = await fetch('/api/admin/subscriptions');
+        let plansData = [];
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.subscriptions && Array.isArray(data.subscriptions)) {
+            plansData = data.subscriptions;
+            console.log('Fetched subscription plans from /subscriptions:', plansData);
+          }
         }
-        const data = await response.json();
-        setSubscriptionPlans(data.plans);
+
+        // If no plans found, try the subscription-plans endpoint as fallback
+        if (plansData.length === 0) {
+          response = await fetch('/api/admin/subscription-plans');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.plans && Array.isArray(data.plans)) {
+              plansData = data.plans;
+              console.log('Fetched subscription plans from /subscription-plans:', plansData);
+            }
+          } else {
+            throw new Error('Failed to fetch subscription plans');
+          }
+        }
+
+        if (plansData.length > 0) {
+          setSubscriptionPlans(plansData);
+        } else {
+          console.warn('No subscription plans found in either API response');
+          showToast('No subscription plans available', 'error');
+        }
       } catch (error) {
         console.error('Error fetching subscription plans:', error);
         showToast('Failed to load subscription plans', 'error');

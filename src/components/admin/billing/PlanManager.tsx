@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { showToast } from '@/lib/toast/toastUtils';
 import ClientPlanList from './ClientPlanList';
 import AssignSubscriptionModal from '../subscriptions/AssignSubscriptionModal';
 
@@ -74,7 +73,7 @@ const fetchClients = async (): Promise<Client[]> => {
 };
 
 const PlanManager: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdminOrSE } = useAuth();
   const [isAssignPlanModalOpen, setIsAssignPlanModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -158,7 +157,7 @@ const PlanManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Client Subscription Plans</h2>
-        {isAdmin && (
+        {isAdminOrSE && (
           <button
             onClick={() => handleOpenAssignPlanModal()}
             className="bg-buttonPrimary text-textLight px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity duration-300 flex items-center"

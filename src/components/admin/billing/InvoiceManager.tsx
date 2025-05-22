@@ -32,12 +32,12 @@ const fetchInvoices = async (): Promise<Invoice[]> => {
 };
 
 const InvoiceManager: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdminOrSE } = useAuth();
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Get the query client instance
   const queryClient = useQueryClient();
 
@@ -53,7 +53,7 @@ const InvoiceManager: React.FC = () => {
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
-  
+
 
 
   const handleInvoiceSuccess = () => {
@@ -68,7 +68,7 @@ const InvoiceManager: React.FC = () => {
     setIsEditMode(true);
     setIsInvoiceModalOpen(true);
   };
-  
+
   const handleCreateInvoice = () => {
     setSelectedInvoice(null);
     setIsEditMode(false);
@@ -79,7 +79,7 @@ const InvoiceManager: React.FC = () => {
     setSelectedInvoice(invoice);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleDeleteSuccess = () => {
     setIsDeleteModalOpen(false);
     setSelectedInvoice(null);
@@ -98,7 +98,7 @@ const InvoiceManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Client Invoices</h2>
-        {isAdmin && (
+        {isAdminOrSE && (
           <button
             onClick={handleCreateInvoice}
             className="bg-buttonPrimary text-textLight px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity duration-300 flex items-center"
@@ -129,7 +129,7 @@ const InvoiceManager: React.FC = () => {
         existingInvoice={selectedInvoice || undefined}
         isEdit={isEditMode}
       />
-      
+
       <DeleteInvoiceModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

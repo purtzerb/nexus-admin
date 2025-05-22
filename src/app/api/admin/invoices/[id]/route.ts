@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/db';
-import Invoice from '@/models/Invoice';
+import Invoice, { IInvoice } from '@/models/Invoice';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import mongoose from 'mongoose';
 
@@ -22,9 +22,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     const {id} = await params;
@@ -36,13 +36,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const invoice = await Invoice.findById(id).lean();
+    const invoice = await Invoice.findById(id).lean() as (IInvoice & { _id: mongoose.Types.ObjectId }) | null;
 
     if (!invoice) {
       return NextResponse.json(
         { error: 'Invoice not found' },
         { status: 404 }
       );
+    }
+    
+    // For SE users, check if the invoice belongs to one of their assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      const clientId = invoice.clientId.toString();
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
     }
 
     return NextResponse.json({ invoice });
@@ -67,9 +75,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     const {id} = await params;
@@ -83,13 +91,21 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     const data = await req.json();
 
-    const invoice = await Invoice.findById(id);
+    const invoice = await Invoice.findById(id) as mongoose.Document & IInvoice;
 
     if (!invoice) {
       return NextResponse.json(
         { error: 'Invoice not found' },
         { status: 404 }
       );
+    }
+    
+    // For SE users, check if the invoice belongs to one of their assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      const clientId = invoice.clientId.toString();
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
     }
 
     // Update all invoice fields
@@ -129,9 +145,9 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     const {id} = await params;
@@ -143,13 +159,21 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const invoice = await Invoice.findById(id);
+    const invoice = await Invoice.findById(id) as mongoose.Document & IInvoice;
 
     if (!invoice) {
       return NextResponse.json(
         { error: 'Invoice not found' },
         { status: 404 }
       );
+    }
+    
+    // For SE users, check if the invoice belongs to one of their assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      const clientId = invoice.clientId.toString();
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
     }
 
     // Instead of deleting, we'll mark it as VOID

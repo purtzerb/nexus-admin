@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import mongoose from 'mongoose';
-import SubscriptionPlan, { ISubscriptionPlan } from '@/models/SubscriptionPlan';
+import { SubscriptionPlan } from '@/models/index';
 
 // Helper functions to map frontend values to database enum values
 function mapPricingModel(model: string): 'CONSUMPTION' | 'FIXED' | 'TIERED_USAGE' | 'PER_SEAT' {
@@ -35,9 +35,9 @@ export async function GET(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
     
     // Get all subscription plans
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
+    // Check if user has admin role - only admins can create/modify subscription plans
     if (!hasRequiredRole(user, ['ADMIN'])) {
       return forbiddenResponse('Forbidden: Admin access required');
     }

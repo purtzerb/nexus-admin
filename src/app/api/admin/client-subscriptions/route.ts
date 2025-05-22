@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
-import ClientSubscription from '@/models/ClientSubscription';
-import Client from '@/models/Client';
-import SubscriptionPlan from '@/models/SubscriptionPlan';
+import {Client, ClientSubscription, SubscriptionPlan} from '@/models/index';
 import { Types } from 'mongoose';
 
 // GET /api/admin/client-subscriptions - Get client subscriptions with pagination and search
@@ -18,9 +16,9 @@ export async function GET(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     // Parse query parameters
@@ -29,31 +27,74 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const search = url.searchParams.get('search') || '';
     const clientId = url.searchParams.get('clientId') || '';
-    
+
     const skip = (page - 1) * limit;
 
     // Build search query
     let searchQuery: any = {};
-    
-    // Filter by clientId if provided
-    if (clientId) {
+
+    // If user is a solutions engineer, limit to assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      if (!user.assignedClientIds || user.assignedClientIds.length === 0) {
+        return NextResponse.json({
+          subscriptions: [],
+          totalCount: 0,
+          page,
+          totalPages: 0
+        });
+      }
+
+      // Filter by assigned client IDs
+      if (clientId) {
+        // Check if the SE is assigned to this specific client
+        if (!user.assignedClientIds.includes(clientId)) {
+          return forbiddenResponse('Forbidden: You are not assigned to this client');
+        }
+        searchQuery.clientId = clientId;
+      } else {
+        // Filter by all assigned clients
+        searchQuery.clientId = { $in: user.assignedClientIds };
+      }
+    }
+    // For admin users, filter by clientId if provided
+    else if (clientId) {
       searchQuery.clientId = clientId;
       console.log('Filtering subscriptions by clientId:', clientId);
     }
+
     if (search && !clientId) {
       // First, find clients matching the search term
       const clients = await Client.find({
         companyName: { $regex: search, $options: 'i' }
       }, { _id: 1 }).lean();
-      
+
       const clientIds = clients.map(client => client._id);
-      
+
       // Then use those client IDs to filter subscriptions
       if (clientIds.length > 0) {
-        searchQuery.clientId = { $in: clientIds };
+        // If we already have a clientId filter (for SE users), intersect with search results
+        if (searchQuery.clientId && searchQuery.clientId.$in) {
+          const assignedClientIds = searchQuery.clientId.$in;
+          const filteredClientIds = clientIds.filter(id =>
+            assignedClientIds.some((assignedId: string) => assignedId === (id as Types.ObjectId).toString())
+          );
+
+          if (filteredClientIds.length === 0) {
+            return NextResponse.json({
+              subscriptions: [],
+              totalCount: 0,
+              page,
+              totalPages: 0
+            });
+          }
+
+          searchQuery.clientId = { $in: filteredClientIds };
+        } else {
+          searchQuery.clientId = { $in: clientIds };
+        }
       } else {
         // If no clients match, return empty result
-        return NextResponse.json({ 
+        return NextResponse.json({
           subscriptions: [],
           totalCount: 0,
           page,
@@ -128,22 +169,31 @@ export async function POST(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     const data = await req.json();
 
-    // Validate required fields
-    const requiredFields = ['clientId', 'subscriptionPlanId', 'startDate', 'status'];
-    for (const field of requiredFields) {
-      if (!data[field]) {
-        return NextResponse.json(
-          { error: `Missing required field: ${field}` },
-          { status: 400 }
-        );
+    // For SE users, verify they can only create subscriptions for assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      const { clientId } = data;
+      if (!clientId) {
+        return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
       }
+
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
+    }
+
+    // Validate required fields
+    if (!data.clientId || !data.subscriptionPlanId || !data.startDate) {
+      return NextResponse.json(
+        { error: 'Missing required fields: clientId, subscriptionPlanId, and startDate are required' },
+        { status: 400 }
+      );
     }
 
     // Verify client exists
@@ -168,14 +218,16 @@ export async function POST(req: NextRequest) {
     const newSubscription = new ClientSubscription({
       clientId: data.clientId,
       subscriptionPlanId: data.subscriptionPlanId,
-      startDate: data.startDate ? new Date(data.startDate) : new Date(),
+      startDate: new Date(data.startDate),
       endDate: data.endDate ? new Date(data.endDate) : undefined,
-      status: data.status || 'ACTIVE'
+      status: data.status || 'ACTIVE',
+      baseFeeOverride: data.baseFeeOverride,
+      creditsRemainingThisPeriod: data.creditsRemainingThisPeriod
     });
 
     await newSubscription.save();
 
-    // Update client's activeSubscriptionId
+    // Update client's active subscription
     await Client.findByIdAndUpdate(data.clientId, {
       activeSubscriptionId: newSubscription._id
     });
@@ -205,17 +257,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     // Extract ID from URL
     const url = new URL(req.url);
     const segments = url.pathname.split('/');
     const id = segments[segments.length - 1];
-
-    const data = await req.json();
 
     // Verify client subscription exists
     const subscription = await ClientSubscription.findById(id);
@@ -225,6 +275,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         { status: 404 }
       );
     }
+
+    // For SE users, verify they can only update subscriptions for assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      const clientId = subscription.clientId.toString();
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
+    }
+
+    const data = await req.json();
 
     // Update subscription fields
     if (data.subscriptionPlanId) {
@@ -272,9 +332,9 @@ export async function DELETE(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     // Extract ID from URL
@@ -289,6 +349,14 @@ export async function DELETE(req: NextRequest) {
         { error: 'Client subscription not found' },
         { status: 404 }
       );
+    }
+
+    // For SE users, verify they can only delete subscriptions for assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      const clientId = subscription.clientId.toString();
+      if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
     }
 
     // Get client ID before deleting subscription
