@@ -8,7 +8,8 @@ import {
   MessagingIcon,
   ReportingIcon,
   ExceptionsIcon,
-  SettingsIcon
+  SettingsIcon,
+  ReportingIcon2
 } from '@/components/shared/NavIcons';
 import { NavItem } from '@/components/shared/Sidebar';
 
@@ -69,7 +70,7 @@ export const clientNavItems: NavItem[] = [
   {
     label: 'Reporting',
     href: '/client/reporting',
-    icon: <ReportingIcon />,
+    icon: <ReportingIcon2 />,
   },
   {
     label: 'Credentials',

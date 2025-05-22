@@ -34,21 +34,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
-    // Fetch assigned SE details
-    let assignedSEs = [];
+    // Fetch assigned SE details using the client's assignedSolutionsEngineerIds
+    let assignedSEs: any[] = [];
     if (client.assignedSolutionsEngineerIds && client.assignedSolutionsEngineerIds.length > 0) {
-      assignedSEs = await User.find(
-        { 
-          _id: { $in: client.assignedSolutionsEngineerIds },
-          role: 'SOLUTIONS_ENGINEER'
-        },
-        { 
-          firstName: 1, 
-          lastName: 1, 
-          email: 1, 
-          profileImageUrl: 1 
-        }
-      );
+      // Get all users who are solutions engineers and are assigned to this client
+      assignedSEs = await User.find({
+        _id: { $in: client.assignedSolutionsEngineerIds },
+        role: 'SOLUTIONS_ENGINEER'
+      }).select('_id name email profileImageUrl').lean();
+      
+      console.log(`Found ${assignedSEs.length} Solutions Engineers for client ${client._id}:`, 
+        assignedSEs.map(se => ({ id: se._id, name: se.name })));
+    } else {
+      console.log(`No Solutions Engineers assigned to client ${client._id}`);
     }
     
     // Return client details with pipeline progress and assigned SEs
@@ -60,9 +58,9 @@ export async function GET(request: NextRequest) {
       pipelineSteps: client.pipelineSteps,
       assignedSolutionsEngineers: assignedSEs.map((se: any) => ({
         id: se._id,
-        name: `${se.firstName} ${se.lastName}`,
+        name: se.name,
         email: se.email,
-        profileImageUrl: se.profileImageUrl
+        profileImageUrl: se.profileImageUrl || '/images/default-avatar.png'
       }))
     });
     

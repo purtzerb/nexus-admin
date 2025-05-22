@@ -5,12 +5,13 @@ import { useClientDetails, useClientMetrics } from '@/hooks/useClientDashboard';
 import Header from '@/components/shared/PageHeader';
 import Link from 'next/link';
 import Image from 'next/image';
+import { UserIcon } from '@/components/shared/UserIcon';
 
 export default function ClientDashboardPage() {
   const { data: clientDetails, isLoading: isLoadingClient, error: clientError } = useClientDetails();
   const { data: metrics, isLoading: isLoadingMetrics, error: metricsError } = useClientMetrics();
   const [hasError, setHasError] = useState<boolean>(false);
-  
+
   useEffect(() => {
     if (clientError || metricsError) {
       setHasError(true);
@@ -35,7 +36,7 @@ export default function ClientDashboardPage() {
 
   // Show loading skeleton while data is loading
   const isLoading = isLoadingClient || isLoadingMetrics;
-  
+
   // Error message component
   const ErrorMessage = () => (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -47,13 +48,13 @@ export default function ClientDashboardPage() {
       </div>
     </div>
   );
-  
+
   return (
     <div className="min-h-screen bg-background">
       <Header pageTitle="Dashboard" />
       <div className="p-6">
         {hasError && <ErrorMessage />}
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Section: Pipeline Progress */}
           <div className="bg-cardBackground p-6 rounded-lg shadow">
@@ -66,26 +67,26 @@ export default function ClientDashboardPage() {
                   .sort((a, b) => a.order - b.order)
                   .map((step, index) => (
                     <div key={index} className="flex items-center space-x-3">
-                      <div 
+                      <div
                         className={`w-4 h-4 rounded-full ${
-                          step.status === 'completed' 
-                            ? 'bg-success' 
-                            : clientDetails.pipelineProgressCurrentPhase === step.name 
-                              ? 'bg-blue-500' 
+                          step.status === 'completed'
+                            ? 'bg-success'
+                            : clientDetails.pipelineProgressCurrentPhase === step.name
+                              ? 'bg-blue-500'
                               : 'bg-gray-300'
                         }`}
                       ></div>
                       <div>
                         <p className="font-medium">{step.name}</p>
                         <p className="text-sm text-gray-500">
-                          {step.status === 'completed' && step.completedDate 
-                            ? `Completed ${new Date(step.completedDate).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                year: 'numeric' 
-                              })}` 
-                            : clientDetails.pipelineProgressCurrentPhase === step.name 
-                              ? 'In progress' 
+                          {step.status === 'completed' && step.completedDate
+                            ? `Completed ${new Date(step.completedDate).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}`
+                            : clientDetails.pipelineProgressCurrentPhase === step.name
+                              ? 'In progress'
                               : ''}
                         </p>
                       </div>
@@ -96,12 +97,12 @@ export default function ClientDashboardPage() {
               <div>No pipeline steps available</div>
             )}
           </div>
-          
+
           {/* Middle Section: Metrics Cards (stacked vertically) */}
           <div className="space-y-6">
             {/* Time Saved Card */}
             <div className="bg-cardBackground p-6 rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">Time Saved</h2>
+              <p className="text-md mb-4">Time Saved</p>
               <div className="grid grid-cols-2">
                 <div>
                   <div className="text-3xl font-bold">
@@ -117,10 +118,10 @@ export default function ClientDashboardPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Money Saved Card */}
             <div className="bg-cardBackground p-6 rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">Money Saved</h2>
+              <p className="text-md mb-4">Money Saved</p>
               <div className="grid grid-cols-2">
                 <div>
                   <div className="text-3xl font-bold">
@@ -136,21 +137,19 @@ export default function ClientDashboardPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Active Workflows Card */}
             <div className="bg-cardBackground p-6 rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">Active Workflows</h2>
-              <div className="flex justify-between items-center">
-                <div className="text-3xl font-bold">
-                  {isLoadingMetrics ? 'Loading...' : metrics?.activeWorkflows || 0}
-                </div>
-                <Link href="/client/workflows" className="text-sm text-primary hover:underline">
-                  View workflows →
-                </Link>
+              <p className="text-md mb-4">Active Workflows</p>
+              <div className="text-3xl font-bold mb-2">
+                {isLoadingMetrics ? 'Loading...' : metrics?.activeWorkflows || 0}
               </div>
+              <Link href="/client/workflows" className="text-sm text-blue-500 hover:underline inline-flex items-center">
+                View workflows <span className="ml-1">→</span>
+              </Link>
             </div>
           </div>
-          
+
           {/* Right Section: Solutions Engineers */}
           <div>
             {isLoadingClient ? (
@@ -160,25 +159,37 @@ export default function ClientDashboardPage() {
               </div>
             ) : clientDetails?.assignedSolutionsEngineers && clientDetails.assignedSolutionsEngineers.length > 0 ? (
               <div className="bg-cardBackground p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold mb-4">Your Solutions Engineer</h2>
                 <div className="space-y-6">
                   {clientDetails.assignedSolutionsEngineers.map((se, index) => (
-                    <div key={index} className="flex items-center">
-                      <div className="relative mr-4">
-                        <img 
-                          src={se.profileImageUrl || '/images/default-avatar.png'} 
-                          alt={se.name || 'Solutions Engineer'}
-                          className="w-16 h-16 rounded-full object-cover" 
-                        />
+                    <div key={index}>
+                      <div className="flex items-center">
+                        <div className="relative mr-4">
+                          {se.profileImageUrl ? (
+                            <img
+                              src={se.profileImageUrl}
+                              alt={se.name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserIcon size={48} />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-lg">{se.name}</h3>
+                          <p className="text-sm text-gray-500">Solutions Engineer</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-medium text-lg">{se.name || 'Solutions Engineer'}</h3>
-                        <p className="text-sm text-gray-500">Solutions Engineer</p>
-                        <button 
+                      <div className="mt-3">
+                        <button
                           onClick={() => window.location.href = `/client/messaging?se=${se.id}`}
-                          className="mt-2 text-sm text-primary hover:underline"
+                          className="bg-buttonPrimary text-white px-4 py-2 rounded-md flex items-center justify-center w-full"
                         >
-                          Message SE
+                          <span className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                            </svg>
+                            Message SE
+                          </span>
                         </button>
                       </div>
                     </div>
