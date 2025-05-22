@@ -134,3 +134,40 @@ export const NotificationIcon: React.FC<IconProps> = ({ active = false }) => (
     <path d="M9.0001 0.5C8.3087 0.5 7.7501 1.05859 7.7501 1.75V2.44922C4.91807 2.89844 2.7501 5.35156 2.7501 8.3125V9.61719C2.7501 11.3906 2.14463 13.1133 1.03917 14.4961L0.457134 15.2266C0.230572 15.5078 0.187603 15.8945 0.343853 16.2188C0.500103 16.543 0.828228 16.75 1.1876 16.75H16.8126C17.172 16.75 17.5001 16.543 17.6564 16.2188C17.8126 15.8945 17.7696 15.5078 17.5431 15.2266L16.961 14.5C15.8556 13.1133 15.2501 11.3906 15.2501 9.61719V8.3125C15.2501 5.35156 13.0821 2.89844 10.2501 2.44922V1.75C10.2501 1.05859 9.69151 0.5 9.0001 0.5ZM9.0001 4.25H9.3126C11.5548 4.25 13.3751 6.07031 13.3751 8.3125V9.61719C13.3751 11.4883 13.9181 13.3125 14.9259 14.875H3.07432C4.08213 13.3125 4.6251 11.4883 4.6251 9.61719V8.3125C4.6251 6.07031 6.44542 4.25 8.6876 4.25H9.0001ZM11.5001 18H9.0001H6.5001C6.5001 18.6641 6.76182 19.3008 7.23057 19.7695C7.69932 20.2383 8.33604 20.5 9.0001 20.5C9.66417 20.5 10.3009 20.2383 10.7696 19.7695C11.2384 19.3008 11.5001 18.6641 11.5001 18Z" fill={getFillColor(active)}/>
   </svg>
 );
+
+// Icons for client billing page
+export const CreditCardIcon: React.FC<IconProps> = ({ active = false }) => (
+  <svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 0H2C0.89543 0 0 0.89543 0 2V14C0 15.1046 0.89543 16 2 16H18C19.1046 16 20 15.1046 20 14V2C20 0.89543 19.1046 0 18 0ZM2 2H18V4H2V2ZM2 8V14H18V8H2ZM4 10H8C8.55228 10 9 10.4477 9 11C9 11.5523 8.55228 12 8 12H4C3.44772 12 3 11.5523 3 11C3 10.4477 3.44772 10 4 10ZM11 10H12C12.5523 10 13 10.4477 13 11C13 11.5523 12.5523 12 12 12H11C10.4477 12 10 11.5523 10 11C10 10.4477 10.4477 10 11 10Z" fill={getFillColor(active)}/>
+  </svg>
+);
+
+export const InvoiceIcon: React.FC<IconProps> = ({ active = false }) => (
+  <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10 0H2C0.9 0 0 0.9 0 2V18C0 19.1 0.89 20 2 20H14C15.1 20 16 19.1 16 18V6L10 0ZM14 18H2V2H9V7H14V18ZM4 9V11H12V9H4ZM4 13V15H12V13H4Z" fill={getFillColor(active)}/>
+  </svg>
+);
+
+export const UsageIcon: React.FC<IconProps> = ({ active = false }) => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 0H2C0.9 0 0 0.9 0 2V18C0 19.1 0.9 20 2 20H18C19.1 20 20 19.1 20 18V2C20 0.9 19.1 0 18 0ZM6 14V6H10V14H6ZM14 14H12V10H14V14ZM14 8H12V6H14V8ZM4 14H2V12H4V14ZM16 14V16H4V18H16C17.1 18 18 17.1 18 16V14H16ZM18 4H16V2H18V4Z" fill={getFillColor(active)}/>
+  </svg>
+);
+
+export const RefreshIcon: React.FC<IconProps> = ({ active = false }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 0C3.58 0 0 3.58 0 8C0 12.42 3.58 16 8 16C11.15 16 13.86 14.24 15.13 11.65L13.26 10.65C12.29 12.57 10.3 13.87 8 13.87C4.75 13.87 2.13 11.24 2.13 8C2.13 4.76 4.75 2.13 8 2.13C9.91 2.13 11.59 3.04 12.6 4.44L10.5 6.5H16V1L13.97 3.03C12.56 1.21 10.41 0 8 0Z" fill={getFillColor(active)}/>
+  </svg>
+);
+
+export const DownloadIcon: React.FC<IconProps> = ({ active = false }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 11V14H2V11H0V14C0 15.1 0.9 16 2 16H14C15.1 16 16 15.1 16 14V11H14ZM13 7L11.59 5.59L9 8.17V0H7V8.17L4.41 5.59L3 7L8 12L13 7Z" fill={getFillColor(active)}/>
+  </svg>
+);
+
+export const UserIcon: React.FC<IconProps> = ({ active = false }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 8C10.21 8 12 6.21 12 4C12 1.79 10.21 0 8 0C5.79 0 4 1.79 4 4C4 6.21 5.79 8 8 8ZM8 10C5.33 10 0 11.34 0 14V16H16V14C16 11.34 10.67 10 8 10Z" fill={getFillColor(active)}/>
+  </svg>
+);
