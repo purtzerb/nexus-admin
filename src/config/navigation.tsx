@@ -63,7 +63,7 @@ export const clientNavItems: NavItem[] = [
     icon: <DashboardIcon />,
   },
   {
-    label: 'ROI',
+    label: 'Workflow ROI',
     href: '/client/roi',
     icon: <ReportingIcon />,
   },

@@ -144,7 +144,7 @@ export default function ClientDashboardPage() {
               <div className="text-3xl font-bold mb-2">
                 {isLoadingMetrics ? 'Loading...' : metrics?.activeWorkflows || 0}
               </div>
-              <Link href="/client/workflows" className="text-sm text-blue-500 hover:underline inline-flex items-center">
+              <Link href="/client/roi" className="text-sm text-blue-500 hover:underline inline-flex items-center">
                 View workflows <span className="ml-1">→</span>
               </Link>
             </div>
