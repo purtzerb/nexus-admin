@@ -20,6 +20,7 @@ type MongooseCache = {
 };
 
 declare global {
+  // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
 }
 
@@ -49,7 +50,7 @@ async function dbConnect(): Promise<typeof mongoose> {
       return mongoose;
     });
   }
-  
+
   try {
     const mongoose = await cached.promise;
     cached.conn = mongoose;

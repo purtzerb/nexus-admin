@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { ChevronUp, ChevronDown } from './DashboardIcons';
 import { ClientDashboardData, SortField, SortOrder, formatCurrency, formatTime } from '@/lib/db/dashboardService';
 
 interface ClientsTableProps {
@@ -29,8 +28,8 @@ export default function ClientsTable({ clients, sortBy, sortOrder, onSort }: Cli
     if (field !== sortBy) {
       return <span className="text-gray-300 ml-1">↓</span>;
     }
-    
-    return sortOrder === 'asc' 
+
+    return sortOrder === 'asc'
       ? <span className="text-black ml-1">↑</span>
       : <span className="text-black ml-1">↓</span>;
   };
@@ -49,64 +48,64 @@ export default function ClientsTable({ clients, sortBy, sortOrder, onSort }: Cli
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('companyName')}
             >
               CLIENT{getSortIcon('companyName')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('contractStart')}
             >
               CONTRACT START{getSortIcon('contractStart')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('workflowCount')}
             >
               WORKFLOWS{getSortIcon('workflowCount')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('nodeCount')}
             >
               NODES{getSortIcon('nodeCount')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('executionCount')}
             >
               EXECUTIONS{getSortIcon('executionCount')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('exceptionCount')}
             >
               EXCEPTIONS{getSortIcon('exceptionCount')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('revenue')}
             >
               REVENUE{getSortIcon('revenue')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('timeSaved')}
             >
               TIME SAVED{getSortIcon('timeSaved')}
             </th>
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('moneySaved')}
             >
@@ -121,7 +120,7 @@ export default function ClientsTable({ clients, sortBy, sortOrder, onSort }: Cli
                 {client.companyName}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {client.contractStart 
+                {client.contractStart
                   ? format(new Date(client.contractStart), 'MMM d, yyyy')
                   : 'Jan 1, 2025'}
               </td>

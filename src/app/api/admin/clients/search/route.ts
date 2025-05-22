@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 5;
     const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : 0;
 
-    let filter: any = {};
+    const filter: any = {};
 
     // Add search filter if query is provided
     if (query) {
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination info
     const totalCount = await Client.countDocuments(filter);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       clients,
       pagination: {
         total: totalCount,

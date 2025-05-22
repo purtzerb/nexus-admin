@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 const getDateRange = (timespan: string): { startDate: Date, endDate: Date } => {
   const endDate = new Date();
   let startDate = new Date();
-  
+
   switch(timespan) {
     case 'last7days':
       startDate.setDate(endDate.getDate() - 7);
@@ -35,7 +35,7 @@ const getDateRange = (timespan: string): { startDate: Date, endDate: Date } => {
     default:
       startDate.setDate(endDate.getDate() - 30); // Default to last 30 days
   }
-  
+
   return { startDate, endDate };
 };
 
@@ -43,40 +43,40 @@ export async function GET(req: NextRequest) {
   try {
     // Connect to database
     await dbConnect();
-    
+
     // Authenticate the request
     const user = await getAuthUser(req);
-    
+
     if (!user) {
       return unauthorizedResponse();
     }
-    
+
     // Check if user has admin or solutions engineer role
     if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
       return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
-    
+
     // For Solutions Engineers, we need their assigned client IDs
     const isSE = user.role === 'SOLUTIONS_ENGINEER';
-    const assignedClientIds = isSE && Array.isArray(user.assignedClientIds) ? 
+    const assignedClientIds = isSE && Array.isArray(user.assignedClientIds) ?
       user.assignedClientIds.map(id => new mongoose.Types.ObjectId(id)) : null;
-    
+
     // Parse query parameters
     const url = new URL(req.url);
     const timespan = url.searchParams.get('timespan') || 'last30days';
     const sortBy = url.searchParams.get('sortBy') || 'revenue';
     const sortOrder = url.searchParams.get('sortOrder') || 'desc';
-    
+
     // Get date range based on timespan
     const { startDate, endDate } = getDateRange(timespan);
-    
+
     // Get clients based on user role (all active clients for admin, assigned clients for SE)
-    const clientFilter = isSE && assignedClientIds ? 
-      { _id: { $in: assignedClientIds } } : 
+    const clientFilter = isSE && assignedClientIds ?
+      { _id: { $in: assignedClientIds } } :
       { status: 'ACTIVE' };
-    
+
     const activeClients = await Client.find(clientFilter).lean();
-    
+
     // Define an interface for client dashboard data
     interface ClientData {
       _id: any; // Using any to avoid type issues with MongoDB ObjectIds
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
       moneySaved: number;
       [key: string]: any; // Index signature for sortBy dynamic access
     }
-    
+
     // Create a map to quickly identify clients by ID
     const clientMap = new Map<string, ClientData>();
     activeClients.forEach(client => {
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
         });
       }
     });
-    
+
     // Get workflow data
     const workflowData = await Workflow.aggregate([
       {
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add workflow counts to clients
     workflowData.forEach(data => {
       const clientId = data._id?.toString();
@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Get node data
     const nodeData = await WorkflowNode.aggregate([
       {
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add node counts to clients
     nodeData.forEach(data => {
       const clientId = data._id?.toString();
@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Get execution data for the selected time period
     const executionData = await WorkflowExecution.aggregate([
       {
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add execution counts to clients
     executionData.forEach(data => {
       const clientId = data._id?.toString();
@@ -184,7 +184,7 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Get exception data for the selected time period
     const exceptionData = await WorkflowException.aggregate([
       {
@@ -199,7 +199,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add exception counts to clients
     exceptionData.forEach(data => {
       const clientId = data._id?.toString();
@@ -210,7 +210,7 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Get revenue data from invoices for the selected time period
     const revenueData = await Invoice.aggregate([
       {
@@ -226,7 +226,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add revenue to clients
     revenueData.forEach(data => {
       const clientId = data._id?.toString();
@@ -237,7 +237,7 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Get time saved and money saved data
     const timeAndMoneySavedData = await WorkflowExecution.aggregate([
       {
@@ -268,7 +268,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add time and money saved to clients
     timeAndMoneySavedData.forEach(data => {
       const clientId = data._id?.toString();
@@ -280,7 +280,7 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Get contract start dates
     const subscriptionData = await ClientSubscription.aggregate([
       {
@@ -290,7 +290,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     // Add contract start dates to clients
     subscriptionData.forEach(data => {
       const clientId = data._id?.toString();
@@ -301,10 +301,10 @@ export async function GET(req: NextRequest) {
         }
       }
     });
-    
+
     // Convert the map to an array
-    let clientsData = Array.from(clientMap.values());
-    
+    const clientsData = Array.from(clientMap.values());
+
     // Ensure all clients have a contract start date
     clientsData.forEach(client => {
       if (!client.contractStart) {
@@ -312,7 +312,7 @@ export async function GET(req: NextRequest) {
         client.contractStart = new Date(2025, 0, 1); // January 1, 2025 as a default
       }
     });
-    
+
     // Sort the client data
     const sortMultiplier = sortOrder === 'asc' ? 1 : -1;
     clientsData.sort((a, b) => {
@@ -331,7 +331,7 @@ export async function GET(req: NextRequest) {
         return (valueA - valueB) * sortMultiplier;
       }
     });
-    
+
     return NextResponse.json({
       clients: clientsData,
       timespan

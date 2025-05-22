@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build search query
-    let searchQuery: any = {};
+    const searchQuery: any = {};
 
     // If user is a solutions engineer, limit to assigned clients
     if (user.role === 'SOLUTIONS_ENGINEER') {
@@ -246,7 +246,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PUT /api/admin/client-subscriptions/:id - Update a client subscription
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 

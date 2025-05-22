@@ -59,7 +59,7 @@ async function verifyClientUserAccess(userId: string, authUserId: string, authUs
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // 1. Authenticate the user
@@ -115,7 +115,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // 1. Authenticate the user
@@ -231,7 +231,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // 1. Authenticate the user

@@ -16,11 +16,10 @@ import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import StatisticCard from './StatisticCard';
 import ClientsTable from './ClientsTable';
-import SelectInput from '@/components/shared/inputs/SelectInput';
 import PageHeader from '@/components/shared/PageHeader';
 
 export default function DashboardClient() {
-  const { isAdmin, isSolutionsEngineer, isAdminOrSE, loading: authLoading, user } = useAuth();
+  const { isAdminOrSE, loading: authLoading, user } = useAuth();
   const [timespan, setTimespan] = useState<TimespanOption>('last30days');
   const [sortBy, setSortBy] = useState<SortField>('revenue');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');

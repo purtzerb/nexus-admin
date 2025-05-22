@@ -5,14 +5,8 @@ import ClientCredit from '@/models/ClientCredit';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import mongoose from 'mongoose';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/admin/clients/[id]/credits - Get client credit history
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -71,7 +65,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 // POST /api/admin/clients/[id]/credits - Apply credit to client account
-export async function POST(req: NextRequest, { params }: RouteParams) {
+export async function POST(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 

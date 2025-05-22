@@ -10,7 +10,7 @@ dbConnect();
 // GET /api/client/credentials/[id]
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // Authenticate the user
@@ -53,7 +53,7 @@ export async function GET(
 // PUT /api/client/credentials/[id]
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // Authenticate the user
@@ -114,7 +114,7 @@ export async function PUT(
 // DELETE /api/client/credentials/[id]
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     // Authenticate the user

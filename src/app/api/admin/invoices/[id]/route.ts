@@ -4,14 +4,9 @@ import Invoice, { IInvoice } from '@/models/Invoice';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import mongoose from 'mongoose';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
 
 // GET /api/admin/invoices/[id] - Get a specific invoice
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -44,7 +39,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         { status: 404 }
       );
     }
-    
+
     // For SE users, check if the invoice belongs to one of their assigned clients
     if (user.role === 'SOLUTIONS_ENGINEER') {
       const clientId = invoice.clientId.toString();
@@ -64,7 +59,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 // PUT /api/admin/invoices/[id] - Update a specific invoice
-export async function PUT(req: NextRequest, { params }: RouteParams) {
+export async function PUT(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -99,7 +94,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         { status: 404 }
       );
     }
-    
+
     // For SE users, check if the invoice belongs to one of their assigned clients
     if (user.role === 'SOLUTIONS_ENGINEER') {
       const clientId = invoice.clientId.toString();
@@ -134,7 +129,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/admin/invoices/[id] - Delete a specific invoice
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -167,7 +162,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
         { status: 404 }
       );
     }
-    
+
     // For SE users, check if the invoice belongs to one of their assigned clients
     if (user.role === 'SOLUTIONS_ENGINEER') {
       const clientId = invoice.clientId.toString();

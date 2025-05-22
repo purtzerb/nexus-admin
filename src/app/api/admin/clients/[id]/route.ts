@@ -14,7 +14,7 @@ import '@/models/index';
  * Get a specific client by ID
  * Only accessible by admins and solutions engineers
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   // Start a MongoDB session for transaction
   const session = await mongoose.startSession();
@@ -122,12 +122,12 @@ export async function PUT(
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
-    
+
     // If user is a solutions engineer, check if they are assigned to this client
     if (user.role === 'SOLUTIONS_ENGINEER') {
       // Cast client to any to access properties safely
       const clientData = client as any;
-      
+
       const isAssigned = clientData.assignedSolutionsEngineerIds?.some(
         (id: any) => id.toString() === user.id.toString()
       );
@@ -143,8 +143,9 @@ export async function PUT(
     const data = await request.json();
 
     // Extract users and solution engineers from the request data
+    // eslint-disable-next-line prefer-const
     let { users, assignedSolutionsEngineerIds, ...clientUpdateData } = data;
-    
+
     // If user is a solutions engineer, limit what fields they can update
     if (user.role === 'SOLUTIONS_ENGINEER') {
       // SE users can only update certain fields
@@ -154,7 +155,7 @@ export async function PUT(
         'notes',
         'status'
       ];
-      
+
       // Filter out fields that SE users can't update
       const seUpdateData: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -162,14 +163,14 @@ export async function PUT(
           seUpdateData[field] = clientUpdateData[field];
         }
       }
-      
+
       // Replace clientUpdateData with the filtered version
       clientUpdateData = seUpdateData;
-      
+
       // SE users can't update users or assign other SEs
       if (users || assignedSolutionsEngineerIds) {
-        return NextResponse.json({ 
-          error: 'Solutions Engineers cannot modify user assignments or engineer assignments' 
+        return NextResponse.json({
+          error: 'Solutions Engineers cannot modify user assignments or engineer assignments'
         }, { status: 403 });
       }
     }
@@ -338,7 +339,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   // Start a MongoDB session for transaction
   const session = await mongoose.startSession();

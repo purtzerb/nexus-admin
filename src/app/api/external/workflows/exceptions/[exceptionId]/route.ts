@@ -59,7 +59,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { exceptionId: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();

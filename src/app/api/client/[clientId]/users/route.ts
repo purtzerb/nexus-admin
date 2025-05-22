@@ -17,7 +17,7 @@ import { adaptSession } from '@/lib/auth/sessionAdapter';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { clientId: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -71,7 +71,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { clientId: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();

@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   description: 'View and manage client details in the Nexus platform.'
 };
 
-export default function ClientDetailPage({ params }: { params: { id: string } }) {
+// Using the standard Next.js App Router pattern for page components
+export default function ClientDetailPage({
+  params,
+}: any) {
   return (
     <div className="h-fit bg-darkerBackground">
       <PageHeader pageTitle="Client Manager" />

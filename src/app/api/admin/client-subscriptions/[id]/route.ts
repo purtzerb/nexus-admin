@@ -8,7 +8,7 @@ import SubscriptionPlan from '@/models/SubscriptionPlan';
 // PUT /api/admin/client-subscriptions/:id - Update a client subscription
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -72,7 +72,7 @@ export async function PUT(
 // DELETE /api/admin/client-subscriptions/:id - Delete a client subscription
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();

@@ -177,7 +177,7 @@ export default function ExceptionsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedClientId, selectedExceptionType, selectedSeverity]);
-  
+
   // Fetch initial clients on component mount
   useEffect(() => {
     const fetchInitialClients = async () => {
@@ -188,7 +188,7 @@ export default function ExceptionsPage() {
         console.error('Error fetching initial clients:', error);
       }
     };
-    
+
     fetchInitialClients();
   }, []);
 
@@ -196,8 +196,7 @@ export default function ExceptionsPage() {
   const {
     data: paginatedData,
     isLoading,
-    isError,
-    refetch
+    isError
   } = useQuery<PaginatedResponse>({
     queryKey: ['exceptions', currentPage, pageSize, selectedClientId, selectedExceptionType, selectedSeverity],
     queryFn: () => fetchExceptions({
@@ -214,7 +213,7 @@ export default function ExceptionsPage() {
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
-  
+
   // Update exception status mutation
   const updateExceptionMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' }) => {
@@ -236,7 +235,7 @@ export default function ExceptionsPage() {
     onMutate: async ({ id, status }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['exceptions'] });
-      
+
       // Get the current query data
       const previousData = queryClient.getQueryData(['exceptions', {
         clientId: selectedClientId,
@@ -245,7 +244,7 @@ export default function ExceptionsPage() {
         page: currentPage,
         limit: pageSize
       }]);
-      
+
       // Optimistically update the exception status in the UI
       queryClient.setQueryData(['exceptions', {
         clientId: selectedClientId,
@@ -255,15 +254,15 @@ export default function ExceptionsPage() {
         limit: pageSize
       }], (old: any) => {
         if (!old || !old.exceptions) return old;
-        
+
         return {
           ...old,
-          exceptions: old.exceptions.map((exception: Exception) => 
+          exceptions: old.exceptions.map((exception: Exception) =>
             exception._id === id ? { ...exception, status } : exception
           ),
         };
       });
-      
+
       // Return previous data for rollback in case of error
       return { previousData };
     },

@@ -30,7 +30,7 @@ function mapBillingCadence(cadence: string): 'MONTHLY' | 'QUARTERLY' | 'YEARLY' 
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -92,7 +92,7 @@ export async function GET(
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -180,7 +180,7 @@ export async function PUT(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();

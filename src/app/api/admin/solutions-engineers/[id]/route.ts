@@ -3,6 +3,7 @@ import { userService } from '@/lib/db/userService';
 import { clientService } from '@/lib/db/clientService';
 import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
+import { ObjectId } from 'mongoose';
 
 /**
  * GET /api/admin/solutions-engineers/[id]
@@ -11,7 +12,7 @@ import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse }
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -41,6 +42,10 @@ export async function GET(
     }
 
     // Remove sensitive information before sending to client
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const { passwordHash, passwordSalt, ...userWithoutPassword } = user;
 
     return NextResponse.json({ user: userWithoutPassword });
@@ -57,7 +62,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -101,11 +106,11 @@ export async function PUT(
 
       // Find clients to add and remove
       const clientsToAdd = data.assignedClientIds.filter(
-        (clientId: string) => !currentAssignedClientIds.includes(clientId)
+        (clientId: string) => !currentAssignedClientIds.some((id: any) => id.toString() === clientId.toString())
       );
 
       const clientsToRemove = currentAssignedClientIds.filter(
-        (clientId: string) => !data.assignedClientIds.includes(clientId)
+        (clientId: any) => !data.assignedClientIds.some((id: string) => id.toString() === clientId.toString())
       );
 
       // Update client assignments
@@ -114,7 +119,7 @@ export async function PUT(
       }
 
       for (const clientId of clientsToRemove) {
-        await clientService.removeSolutionsEngineerFromClient(clientId, id);
+        await clientService.removeSolutionsEngineerFromClient(clientId.toString(), id);
       }
     }
 
@@ -122,6 +127,10 @@ export async function PUT(
     const updatedUser = await userService.updateUser(id, data);
 
     // Remove sensitive information before sending to client
+    if (!updatedUser) {
+      return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    }
+
     const { passwordHash, passwordSalt, ...userWithoutPassword } = updatedUser;
 
     return NextResponse.json({ user: userWithoutPassword });
@@ -138,7 +147,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     await dbConnect();
@@ -170,13 +179,17 @@ export async function DELETE(
     // Remove SE from all assigned clients
     const assignedClientIds = existingUser.assignedClientIds || [];
     for (const clientId of assignedClientIds) {
-      await clientService.removeSolutionsEngineerFromClient(clientId, id);
+      await clientService.removeSolutionsEngineerFromClient(clientId.toString(), id);
     }
 
     // Delete user
     const deletedUser = await userService.deleteUser(id);
 
     // Remove sensitive information before sending to client
+    if (!deletedUser) {
+      return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    }
+
     const { passwordHash, passwordSalt, ...userWithoutPassword } = deletedUser;
 
     return NextResponse.json({ user: userWithoutPassword });

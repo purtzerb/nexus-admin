@@ -13,14 +13,8 @@ interface IWorkflowException {
   };
 }
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/admin/exceptions/[id] - Get a specific exception
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -76,7 +70,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 // PATCH /api/admin/exceptions/[id] - Update a specific exception's status
-export async function PATCH(req: NextRequest, { params }: RouteParams) {
+export async function PATCH(req: NextRequest, { params }: any) {
   try {
     await dbConnect();
 
@@ -103,7 +97,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     // Parse request body
     const data = await req.json();
-    
+
     // Validate status
     if (!data.status) {
       return NextResponse.json(
@@ -111,7 +105,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
-    
+
     // Validate status value
     const validStatuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
     if (!validStatuses.includes(data.status)) {
