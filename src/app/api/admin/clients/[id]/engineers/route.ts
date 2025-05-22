@@ -4,6 +4,8 @@ import { userService } from '@/lib/db/userService';
 import dbConnect from '@/lib/db/db';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 import { IClient } from '@/models/Client';
+// Import models to ensure they are registered correctly
+import '@/models/index';
 
 /**
  * GET /api/admin/clients/[id]/engineers

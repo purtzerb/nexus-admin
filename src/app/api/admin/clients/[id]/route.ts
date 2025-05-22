@@ -6,6 +6,8 @@ import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse }
 import { IClient, IPipelineStep, IDocumentLink } from '@/models/Client';
 import mongoose from 'mongoose';
 import { generatePasswordHash } from '@/lib/auth/passwordUtils';
+// Import models to ensure they are registered correctly
+import '@/models/index';
 
 /**
  * GET /api/admin/clients/[id]
@@ -89,7 +91,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 /**
  * PUT /api/admin/clients/[id]
  * Update a specific client
- * Only accessible by admins
+ * Accessible by admins and solutions engineers assigned to the client
+ * Solutions engineers have limited update capabilities
  */
 export async function PUT(
   request: NextRequest,
@@ -108,9 +111,9 @@ export async function PUT(
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     const {id: clientId} = await params;
@@ -119,6 +122,20 @@ export async function PUT(
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+    
+    // If user is a solutions engineer, check if they are assigned to this client
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      // Cast client to any to access properties safely
+      const clientData = client as any;
+      
+      const isAssigned = clientData.assignedSolutionsEngineerIds?.some(
+        (id: any) => id.toString() === user.id.toString()
+      );
+
+      if (!isAssigned) {
+        return forbiddenResponse('Forbidden: You are not assigned to this client');
+      }
+    }
 
     // Start transaction
     session.startTransaction();
@@ -126,7 +143,36 @@ export async function PUT(
     const data = await request.json();
 
     // Extract users and solution engineers from the request data
-    const { users, assignedSolutionsEngineerIds, ...clientUpdateData } = data;
+    let { users, assignedSolutionsEngineerIds, ...clientUpdateData } = data;
+    
+    // If user is a solutions engineer, limit what fields they can update
+    if (user.role === 'SOLUTIONS_ENGINEER') {
+      // SE users can only update certain fields
+      const allowedFields = [
+        'pipelineSteps',
+        'documentLinks',
+        'notes',
+        'status'
+      ];
+      
+      // Filter out fields that SE users can't update
+      const seUpdateData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (field in clientUpdateData) {
+          seUpdateData[field] = clientUpdateData[field];
+        }
+      }
+      
+      // Replace clientUpdateData with the filtered version
+      clientUpdateData = seUpdateData;
+      
+      // SE users can't update users or assign other SEs
+      if (users || assignedSolutionsEngineerIds) {
+        return NextResponse.json({ 
+          error: 'Solutions Engineers cannot modify user assignments or engineer assignments' 
+        }, { status: 403 });
+      }
+    }
 
     // First, update basic client information without touching users
     const updateData = {

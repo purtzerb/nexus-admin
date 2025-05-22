@@ -3,11 +3,14 @@ import { userService } from '@/lib/db/userService';
 import dbConnect from '@/lib/db/db';
 import { generatePasswordSalt, hashPassword } from '@/lib/auth/password';
 import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
+// Import models to ensure they are registered correctly
+import '@/models/index';
 
 /**
  * GET /api/admin/users
- * Get all admin users
- * Only accessible by admins
+ * Get users based on query parameters
+ * Admins can access all users
+ * Solutions Engineers can only access users for clients they're assigned to
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,9 +23,9 @@ export async function GET(request: NextRequest) {
       return unauthorizedResponse();
     }
     
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
     
     // Get query parameters
@@ -47,6 +50,16 @@ export async function GET(request: NextRequest) {
     if (clientId) {
       filter.clientId = clientId;
       console.log(`Filtering users by clientId: ${clientId}`);
+      
+      // If user is a solutions engineer, verify they are assigned to this client
+      if (user.role === 'SOLUTIONS_ENGINEER') {
+        if (!user.assignedClientIds || !user.assignedClientIds.includes(clientId)) {
+          return forbiddenResponse('Forbidden: You are not assigned to this client');
+        }
+      }
+    } else if (user.role === 'SOLUTIONS_ENGINEER' && role === 'CLIENT_USER') {
+      // SE users can only view client users for clients they're assigned to
+      return forbiddenResponse('Forbidden: Must specify a clientId when querying client users');
     }
     
     console.log('User filter:', filter);
