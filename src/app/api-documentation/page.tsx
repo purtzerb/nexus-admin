@@ -19,8 +19,6 @@ export default function ApiDocumentationPage() {
           flex-direction: column;
         }
       `}</style>
-      {/* Wrap the component with ts-ignore to bypass TypeScript errors */}
-      {/* @ts-ignore */}
       <ApiReferenceReact
         configuration={{
           url: '/openapi.json',
