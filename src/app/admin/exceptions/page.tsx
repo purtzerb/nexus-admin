@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { showToast } from '@/lib/toast/toastUtils';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { showToast, handleApiError } from '@/lib/toast/toastUtils';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import PageHeader from '@/components/shared/PageHeader';
 import SearchableSelect, { Option } from '@/components/shared/inputs/SearchableSelect';
@@ -214,6 +214,85 @@ export default function ExceptionsPage() {
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
+  
+  // Update exception status mutation
+  const updateExceptionMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' }) => {
+      const response = await fetch(`/api/admin/exceptions/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update exception status');
+      }
+
+      return response.json();
+    },
+    onMutate: async ({ id, status }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['exceptions'] });
+      
+      // Get the current query data
+      const previousData = queryClient.getQueryData(['exceptions', {
+        clientId: selectedClientId,
+        exceptionType: selectedExceptionType,
+        severity: selectedSeverity,
+        page: currentPage,
+        limit: pageSize
+      }]);
+      
+      // Optimistically update the exception status in the UI
+      queryClient.setQueryData(['exceptions', {
+        clientId: selectedClientId,
+        exceptionType: selectedExceptionType,
+        severity: selectedSeverity,
+        page: currentPage,
+        limit: pageSize
+      }], (old: any) => {
+        if (!old || !old.exceptions) return old;
+        
+        return {
+          ...old,
+          exceptions: old.exceptions.map((exception: Exception) => 
+            exception._id === id ? { ...exception, status } : exception
+          ),
+        };
+      });
+      
+      // Return previous data for rollback in case of error
+      return { previousData };
+    },
+    onSuccess: () => {
+      showToast('Exception status updated successfully', 'success');
+    },
+    onError: (error: Error, _variables, context) => {
+      // Rollback to the previous data if available
+      if (context?.previousData) {
+        queryClient.setQueryData(['exceptions', {
+          clientId: selectedClientId,
+          exceptionType: selectedExceptionType,
+          severity: selectedSeverity,
+          page: currentPage,
+          limit: pageSize
+        }], context.previousData);
+      }
+      handleApiError(error, 'Failed to update exception status');
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['exceptions'] });
+    },
+  });
+
+  // Function to update exception status
+  const updateExceptionStatus = ({ id, status }: { id: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' }) => {
+    updateExceptionMutation.mutate({ id, status });
+  };
 
   return (
     <div className="h-full bg-darkerBackground">
@@ -356,8 +435,10 @@ export default function ExceptionsPage() {
                       <select
                         value={exception.status}
                         onChange={(e) => {
-                          // Handle status change - would need an API endpoint to update status
-                          showToast('Status update functionality not implemented yet', 'info');
+                          updateExceptionStatus({
+                            id: exception._id,
+                            status: e.target.value as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+                          });
                         }}
                         className={`text-xs px-2 py-1 rounded ${getStatusClass(exception.status)}`}
                       >
