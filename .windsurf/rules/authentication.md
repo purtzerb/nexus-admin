@@ -40,23 +40,37 @@ All API routes must follow these authentication guidelines:
 1. **Use the central authentication utility**
    - Always use the `getAuthUser` function from `@/lib/auth/apiAuth.ts` to authenticate requests
    - Never implement custom authentication logic in individual API routes
+   - Never use NextAuth's `getServerSession` in API routes
 
 2. **Consistent authentication pattern**
    ```typescript
-   // 1. Connect to the database
-   await dbConnect();
+   import { getAuthUser, hasRequiredRole, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/apiAuth';
 
-   // 2. Authenticate the request
-   const user = await getAuthUser(request);
-
-   // 3. Return 401 if not authenticated
-   if (!user) {
-     return unauthorizedResponse();
-   }
-
-   // 4. Check for required roles if needed
-   if (!hasRequiredRole(user, ['ADMIN'])) {
-     return forbiddenResponse('Specific error message');
+   // In your route handler:
+   try {
+     // 1. Authenticate the user
+     const authUser = await getAuthUser(req);
+     
+     // 2. Check if user is authenticated
+     if (!authUser) {
+       return unauthorizedResponse();
+     }
+     
+     // 3. Check for required roles
+     if (!hasRequiredRole(authUser, ['CLIENT_USER'])) {
+       return forbiddenResponse('Only client users can access this endpoint');
+     }
+     
+     // 4. For client routes, ensure clientId is available
+     if (!authUser.clientId) {
+       return forbiddenResponse('Client ID not found for user');
+     }
+     
+     // 5. Use authUser.clientId in your database queries
+     const data = await SomeModel.find({ clientId: authUser.clientId });
+   } catch (error) {
+     console.error('Error:', error);
+     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
    }
    ```
 
