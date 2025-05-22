@@ -44,6 +44,9 @@ export const dynamic = 'force-dynamic';
  *               duration:
  *                 type: number
  *                 description: Duration of the execution in milliseconds
+ *               details:
+ *                 type: string
+ *                 description: Details of the execution
  *     responses:
  *       201:
  *         description: Execution created successfully
