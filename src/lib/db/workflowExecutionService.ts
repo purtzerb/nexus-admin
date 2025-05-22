@@ -14,12 +14,12 @@ export const workflowExecutionService = {
    */
   async createExecution(executionData: Partial<IWorkflowExecution>) {
     await dbConnect();
-    
+
     // Create the execution record without using transactions
     // We don't need to increment counters anymore as they're calculated dynamically
     const execution = new WorkflowExecution(executionData);
     await execution.save();
-    
+
     return execution;
   },
 

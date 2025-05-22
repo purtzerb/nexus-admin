@@ -11,6 +11,7 @@ export interface IWorkflowExecution extends Document {
   clientId: mongoose.Types.ObjectId;
   status: 'SUCCESS' | 'FAILURE';
   duration: number; // Duration in milliseconds
+  details: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +40,10 @@ const workflowExecutionSchema = new Schema<IWorkflowExecution>({
     enum: ['SUCCESS', 'FAILURE'],
     default: 'SUCCESS'
   },
+  details: {
+    type: String,
+    required: false
+  },
   duration: {
     type: Number,
     required: false
@@ -49,7 +54,7 @@ const workflowExecutionSchema = new Schema<IWorkflowExecution>({
 workflowExecutionSchema.index({ clientId: 1, workflowId: 1, createdAt: -1 });
 
 // Create or retrieve the WorkflowExecution model
-const WorkflowExecution = mongoose.models.WorkflowExecution || 
+const WorkflowExecution = mongoose.models.WorkflowExecution ||
   mongoose.model<IWorkflowExecution>('WorkflowExecution', workflowExecutionSchema);
 
 export default WorkflowExecution;

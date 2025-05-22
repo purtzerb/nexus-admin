@@ -72,64 +72,66 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    
+
     // Authenticate the request
     const authError = authenticateApiKey(request);
     if (authError) return authError;
-    
+
     // Parse request body
     const data = await request.json();
-    const { 
-      executionId, 
-      workflowName, 
-      clientId, 
-      status, 
-      duration 
+    const {
+      executionId,
+      workflowName,
+      clientId,
+      status,
+      duration,
+      details
     } = data;
-    
+
     // Validate required fields
     if (!executionId || !workflowName || !clientId) {
-      return NextResponse.json({ 
-        error: 'Missing required fields' 
+      return NextResponse.json({
+        error: 'Missing required fields'
       }, { status: 400 });
     }
-    
+
     // Check if the execution already exists
     const existingExecution = await workflowExecutionService.getExecutionById(executionId);
     if (existingExecution) {
-      return NextResponse.json({ 
-        error: 'Execution with this ID already exists' 
+      return NextResponse.json({
+        error: 'Execution with this ID already exists'
       }, { status: 409 });
     }
-    
+
     // Find the workflow by name and client ID
     const workflow = await workflowLookupService.findWorkflowByNameAndClient(workflowName, clientId);
     if (!workflow || !workflow._id) {
-      return NextResponse.json({ 
-        error: 'Workflow not found' 
+      return NextResponse.json({
+        error: 'Workflow not found'
       }, { status: 404 });
     }
-    
+
     // Create the execution
     const executionData = {
       executionId,
       workflowId: workflow._id,
       clientId: new mongoose.Types.ObjectId(clientId),
       status: status || 'SUCCESS',
+      details: details || '',
       duration: duration || 0
     };
-    
+
     const execution = await workflowExecutionService.createExecution(executionData);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
       message: 'Execution created successfully',
       execution
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating execution:', error);
-    return NextResponse.json({ 
-      error: 'Failed to create execution' 
+    return NextResponse.json({
+      error: 'Failed to create execution'
     }, { status: 500 });
   }
 }
