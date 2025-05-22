@@ -51,11 +51,16 @@ export async function GET(request: NextRequest) {
     
     console.log('User filter:', filter);
     
-    // Get users based on filter
-    const users = await userService.getUsers(
-      filter,
-      { limit, skip, sort: { name: 1 as 1 } }
-    );
+    // Get users based on filter with department population if clientId is provided
+    const options = { limit, skip, sort: { name: 1 as 1 } };
+    
+    // If filtering by clientId, also populate the department information
+    let users;
+    if (clientId) {
+      users = await userService.getUsersWithDepartments(filter, options);
+    } else {
+      users = await userService.getUsers(filter, options);
+    }
     
     // Remove sensitive information before sending to client
     const sanitizedUsers = users.map(userData => {

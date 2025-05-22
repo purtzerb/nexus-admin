@@ -49,8 +49,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // Fetch client users from the User collection
-    const clientUsers = await userService.getClientUsers(clientId);
+    // Fetch client users from the User collection with populated department information
+    const clientUsers = await userService.getUsersWithDepartments({
+      role: 'CLIENT_USER',
+      clientId
+    });
     console.log(`Found ${clientUsers.length} users for client ${clientId}`);
 
     // Add users to the client object
@@ -61,7 +64,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         name: user.name,
         email: user.email,
         phone: user.phone,
-        department: user.departmentId,
+        department: user.department || {
+          id: user.departmentId,
+          name: ''
+        },
         exceptions: {
           email: user.notifyByEmailForExceptions || false,
           sms: user.notifyBySmsForExceptions || false

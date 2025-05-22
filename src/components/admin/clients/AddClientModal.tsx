@@ -51,6 +51,12 @@ interface AddClientModalProps {
   mode?: 'create' | 'update';
 }
 
+// Helper function to truncate text after 12 characters
+const truncateText = (text: string, maxLength: number = 12): string => {
+  if (!text) return '';
+  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+};
+
 const AddClientModal: React.FC<AddClientModalProps> = ({
   isOpen,
   onClose,
@@ -122,7 +128,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
         throw new Error('Failed to fetch client users');
       }
       const data = await response.json();
-      console.log('Fetched client users:', data.users);
+      console.log('BONGO Fetched client users:', data.users);
       return data.users || [];
     } catch (error) {
       console.error('Error fetching client users:', error);
@@ -174,24 +180,39 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
           const clientUsers = await fetchClientUsers(client._id);
 
           if (clientUsers.length > 0) {
-            const formattedUsers = clientUsers.map((user: any) => ({
-              _id: user._id || undefined,
-              name: user.name || '',
-              email: user.email || '',
-              phone: user.phone || '',
-              department: user.departmentId ? {
-                id: user.departmentId,
-                name: '' // We'll need to look up the department name if needed
-              } : undefined,
-              exceptions: {
-                email: user.notifyByEmailForExceptions || false,
-                sms: user.notifyBySmsForExceptions || false
-              },
-              access: {
-                billing: user.hasBillingAccess || false,
-                admin: user.isClientAdmin || false
+            // Format users with their populated department data
+            const formattedUsers = clientUsers.map((user: any) => {
+              let departmentData = undefined;
+
+              // If the API already provided department information via population
+              if (user.department) {
+                departmentData = user.department;
               }
-            }));
+              // If the API provided departmentId but no department object
+              else if (user.departmentId) {
+                departmentData = {
+                  id: user.departmentId,
+                  name: 'Unknown Department' // Fallback name
+                };
+              }
+
+              return {
+                _id: user._id || undefined,
+                name: user.name || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                department: departmentData,
+                exceptions: {
+                  email: user.notifyByEmailForExceptions || false,
+                  sms: user.notifyBySmsForExceptions || false
+                },
+                access: {
+                  billing: user.hasBillingAccess || false,
+                  admin: user.isClientAdmin || false
+                }
+              };
+            });
+
             setUsers(formattedUsers);
           }
         };
@@ -619,6 +640,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
     }
   };
 
+  console.log("BONGO ADD CLIENT MODAL", {
+    users})
+
   return (
     <Modal
       isOpen={isOpen}
@@ -802,11 +826,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
               <div className="ml-3">
                 {users.map((user, index) => (
                   <div key={index} className="grid grid-cols-7 gap-2 p-2 border-b border-buttonBorder last:border-b-0">
-                    <div>{user.name}</div>
-                    <div>{user.email}</div>
+                    <div title={user.name}>{truncateText(user.name)}</div>
+                    <div title={user.email}>{truncateText(user.email)}</div>
                     <div>{user.password ? '••••••••' : '-'}</div>
-                    <div>{user.phone || '-'}</div>
-                    <div>{user.department?.name || '-'}</div>
+                    <div title={user.phone || '-'}>{truncateText(user.phone || '-')}</div>
+                    <div title={user.department?.name || '-'}>{truncateText(user.department?.name || '-')}</div>
                     <div>
                       {user.exceptions?.email && <span className="mr-2">Email</span>}
                       {user.exceptions?.sms && <span>SMS</span>}
@@ -889,8 +913,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
                 const se = solutionsEngineers?.find(s => s._id === seId);
                 return (
                   <div key={seId} className="grid grid-cols-3 gap-2 p-2 border-b border-buttonBorder last:border-b-0">
-                    <div>{se?.name || 'Unknown'}</div>
-                    <div>{se?.email || ''}</div>
+                    <div title={se?.name || 'Unknown'}>{truncateText(se?.name || 'Unknown')}</div>
+                    <div title={se?.email || ''}>{truncateText(se?.email || '')}</div>
                     <div className="flex justify-end">
                       <button
                         type="button"
