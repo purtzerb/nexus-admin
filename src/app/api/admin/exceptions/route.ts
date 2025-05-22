@@ -18,9 +18,9 @@ export async function GET(req: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Check if user has admin role
-    if (!hasRequiredRole(user, ['ADMIN'])) {
-      return forbiddenResponse('Forbidden: Admin access required');
+    // Check if user has admin or solutions engineer role
+    if (!hasRequiredRole(user, ['ADMIN', 'SOLUTIONS_ENGINEER'])) {
+      return forbiddenResponse('Forbidden: Admin or Solutions Engineer access required');
     }
 
     // Parse query parameters
@@ -34,6 +34,20 @@ export async function GET(req: NextRequest) {
 
     // Build filter based on query parameters
     const filter: Record<string, any> = {};
+    
+    // For SE users, restrict to only their assigned clients
+    if (user.role === 'SOLUTIONS_ENGINEER' && user.assignedClientIds && user.assignedClientIds.length > 0) {
+      if (clientId && clientId !== 'all') {
+        // If a specific client is requested, verify it's in their assigned list
+        if (!user.assignedClientIds.includes(clientId)) {
+          return forbiddenResponse('Forbidden: You are not assigned to this client');
+        }
+        // Client ID is already being added below
+      } else {
+        // If no specific client requested, restrict to assigned clients
+        filter.clientId = { $in: user.assignedClientIds };
+      }
+    }
 
     if (clientId && clientId !== 'all') {
       filter.clientId = clientId;
