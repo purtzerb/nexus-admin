@@ -60,6 +60,6 @@ Functionality:
 
 
 TODO:
--[] Finish out client pages
+-[X] Finish out client pages
 -[] Go through admin flows and restrict SE abilities as appropriate
 -[]

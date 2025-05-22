@@ -10,7 +10,7 @@ const getFillColor = (active: boolean) => active ? '#FFFFFF' : '#141417';
 
 export const DashboardIcon: React.FC<IconProps> = ({ active = false }) => {
   const fillColor = getFillColor(active);
-  console.log("BONGO DASHBOARD FILL COLOR", {fillColor, active})
+
   return (
   <svg width="18" height="16" viewBox="0 0 18 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g clipPath="url(#clip0_4045_13991)">

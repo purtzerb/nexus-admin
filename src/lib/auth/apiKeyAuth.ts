@@ -19,12 +19,6 @@ export const authenticateApiKey = (request: NextRequest): NextResponse | null =>
   const url = new URL(request.url);
   const apiKeyQuery = url.searchParams.get('apiKey');
 
-  console.log("BONGO API AUTH", {
-    validApiKey,
-    apiKeyHeader,
-    apiKeyQuery
-  })
-
   // If using query parameter, log a warning (query parameter method is deprecated)
   if (!apiKeyHeader && apiKeyQuery) {
     console.warn('API key provided via query parameter. This method is deprecated and will be removed in future versions. Please use the x-api-key header instead.');

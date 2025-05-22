@@ -24,15 +24,11 @@ export async function POST(request: NextRequest) {
     let isAuthenticated = false;
     let authenticatedUser = user;
 
-    console.log("BONGO Local Auth", {
-      user
-    })
-
     // Check if user exists and has local password credentials
     if (LOCAL_AUTH_ENABLED && user && user.passwordHash && user.passwordSalt) {
       // Use our custom password verification that matches how passwords are created
       isAuthenticated = verifyPassword(password, user.passwordHash, user.passwordSalt);
-      
+
       console.log("Authentication result:", { isAuthenticated });
     } else {
       // Authenticate against external Braintrust API
