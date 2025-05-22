@@ -6,6 +6,12 @@ import { useAuth } from '@/hooks/useAuth';
 import AddUserModal from '@/components/admin/users/AddUserModal';
 import DeleteUserModal from '@/components/admin/users/DeleteUserModal';
 
+interface Client {
+  _id: string;
+  companyName: string;
+  status?: string;
+}
+
 interface User {
   _id: string;
   name: string;
@@ -14,7 +20,7 @@ interface User {
   role: 'ADMIN' | 'SOLUTIONS_ENGINEER' | 'CLIENT_USER';
   costRate?: number;
   billRate?: number;
-  assignedClientIds?: string[];
+  assignedClientIds?: string[] | Client[];
 }
 
 const fetchAdminUsers = async (): Promise<User[]> => {
@@ -27,7 +33,7 @@ const fetchAdminUsers = async (): Promise<User[]> => {
 };
 
 const fetchSolutionsEngineers = async (): Promise<User[]> => {
-  const response = await fetch('/api/admin/solutions-engineers');
+  const response = await fetch('/api/admin/solutions-engineers?populate=clients');
   if (!response.ok) {
     throw new Error('Failed to fetch solutions engineers');
   }
@@ -64,23 +70,23 @@ const UsersList: React.FC = () => {
     }
     setIsAddUserModalOpen(false);
   };
-  
+
   const handleEditUser = (user: User) => {
     setUserToEdit(user);
     setIsEditUserModalOpen(true);
   };
-  
+
   const handleEditUserSuccess = () => {
     // No need to refetch as we're using React Query cache updates
     setIsEditUserModalOpen(false);
     setUserToEdit(null);
   };
-  
+
   const handleDeleteUser = (user: User) => {
     setUserToDelete(user);
     setIsDeleteUserModalOpen(true);
   };
-  
+
   const handleDeleteUserSuccess = () => {
     // No need to refetch as we're using React Query cache updates
     setIsDeleteUserModalOpen(false);
@@ -100,6 +106,10 @@ const UsersList: React.FC = () => {
   if (isError) {
     return <div className="text-center py-8 text-error">Error loading users. Please try again.</div>;
   }
+
+  console.log("BONGO userlist", {
+    users
+  })
 
   return (
     <div>
@@ -204,11 +214,18 @@ const UsersList: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1">
                           {user.assignedClientIds && user.assignedClientIds.length > 0 ? (
-                            user.assignedClientIds.map((clientId: string, index: number) => (
-                              <span key={clientId} className="bg-gray-100 px-2 py-1 rounded text-xs">
-                                Client {index + 1}
-                              </span>
-                            ))
+                            user.assignedClientIds.map((client: any, index: number) => {
+                              // Check if client is populated (object) or just an ID (string)
+                              const isPopulated = typeof client !== 'string';
+                              const clientId = isPopulated ? client._id : client;
+                              const clientName = isPopulated ? client.companyName : `Client ${index + 1}`;
+                              
+                              return (
+                                <span key={clientId} className="bg-gray-100 px-2 py-1 rounded text-xs">
+                                  {clientName}
+                                </span>
+                              );
+                            })
                           ) : (
                             <span className="text-sm text-textSecondary">No clients</span>
                           )}
@@ -217,7 +234,7 @@ const UsersList: React.FC = () => {
                     </>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
+                    <button
                       onClick={() => handleEditUser(user)}
                       className="text-textPrimary hover:text-textSecondary mr-3 transition-opacity duration-200"
                       aria-label="Edit user"
@@ -226,7 +243,7 @@ const UsersList: React.FC = () => {
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                       </svg>
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteUser(user)}
                       className="text-error hover:text-opacity-75 transition-opacity duration-200"
                       aria-label="Delete user"
@@ -255,7 +272,7 @@ const UsersList: React.FC = () => {
         onSuccess={handleAddUserSuccess}
         mode="create"
       />
-      
+
       <AddUserModal
         isOpen={isEditUserModalOpen}
         onClose={() => {
@@ -266,7 +283,7 @@ const UsersList: React.FC = () => {
         user={userToEdit}
         mode="update"
       />
-      
+
       <DeleteUserModal
         isOpen={isDeleteUserModalOpen}
         onClose={() => {

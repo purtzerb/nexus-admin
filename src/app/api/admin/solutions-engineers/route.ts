@@ -30,11 +30,29 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const skip = searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : undefined;
+    const populate = searchParams.get('populate');
+    
+    // Set up population options based on query parameters
+    const populateOptions: any = {};
+    
+    // Default to not populating clients unless requested
+    if (populate === 'clients' || populate === 'all') {
+      populateOptions.populate = {
+        path: 'assignedClientIds',
+        model: 'Client',
+        select: '_id companyName status' // Select only necessary fields
+      };
+    }
     
     // Get solutions engineers
     const users = await userService.getUsers(
       { role: 'SOLUTIONS_ENGINEER' },
-      { limit, skip, sort: { name: 1 as 1 } }
+      { 
+        limit, 
+        skip, 
+        sort: { name: 1 as 1 },
+        ...populateOptions
+      }
     );
     
     // Remove sensitive information before sending to client

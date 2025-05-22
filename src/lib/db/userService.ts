@@ -1,5 +1,5 @@
 import User, { IUser, LeanUserDocument } from '@/models/User';
-import { Document } from 'mongoose';
+import { Document, PopulateOptions } from 'mongoose';
 import dbConnect from './db';
 import mongoose from 'mongoose';
 
@@ -10,6 +10,7 @@ interface QueryOptions {
   sort?: Record<string, 1 | -1>;
   limit?: number;
   skip?: number;
+  populate?: string | string[] | PopulateOptions | PopulateOptions[];
 }
 
 /**
@@ -25,8 +26,21 @@ export const userService = {
   async getUsers(filter: FilterQuery = {}, options: QueryOptions = {}): Promise<LeanUserDocument[]> {
     await dbConnect();
 
-    const { sort, limit, skip } = options;
+    const { sort, limit, skip, populate } = options;
     let query = User.find(filter);
+
+    // Handle population of related fields if requested
+    if (populate) {
+      if (Array.isArray(populate)) {
+        // If it's an array of field names or population options
+        for (const field of populate) {
+          query = query.populate(field as any);
+        }
+      } else {
+        // If it's a single field name or population options
+        query = query.populate(populate as any);
+      }
+    }
 
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(limit);
@@ -113,7 +127,7 @@ export const userService = {
       clientId
     }).lean() as unknown as LeanUserDocument[];
   },
-  
+
   /**
    * Get users with populated department information
    * @param {Object} filter - MongoDB filter object
@@ -131,11 +145,11 @@ export const userService = {
     if (skip) query = query.skip(skip);
 
     const users = await query.lean();
-    
+
     // Transform the populated data to match the expected format in the frontend
     return users.map(user => {
       const result = { ...user };
-      
+
       // If departmentId is populated with department data
       if (user.departmentId && typeof user.departmentId === 'object') {
         const dept = user.departmentId as any;
@@ -145,7 +159,7 @@ export const userService = {
           name: dept.name
         };
       }
-      
+
       return result;
     }) as unknown as LeanUserDocument[];
   },
@@ -162,7 +176,7 @@ export const userService = {
       assignedClientIds: clientId
     }).lean() as unknown as LeanUserDocument[];
   },
-  
+
   /**
    * Update multiple users matching a filter
    * @param {Object} filter - MongoDB filter object
