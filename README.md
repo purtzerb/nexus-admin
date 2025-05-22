@@ -1,6 +1,5 @@
 ## Install Dependencies
-I had an issue with swagger docs, so the legacy dependencies is needed for now.
-npm i --legacy-peer-deps
+npm i
 
 ## Run Docker
 npm run db:up
